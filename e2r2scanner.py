@@ -17,6 +17,9 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import LaserScan
 import numpy as np
+import time
+
+from std_msgs.msg import String
 
 
 class Scanner(Node):
@@ -29,24 +32,39 @@ class Scanner(Node):
             self.listener_callback,
             qos_profile_sensor_data)
         self.subscription  # prevent unused variable warning
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
 
     def listener_callback(self, msg):
+        self.get_logger().info('Shortest distance at degrees')
+
         # create numpy array
         laser_range = np.array(msg.ranges)
         # replace 0's with nan
         laser_range[laser_range==0] = np.nan
         # find index with minimum value
         lr2i = np.nanargmin(laser_range)
-
+        
         # log the info
-        self.get_logger().info('Shortest distance at %i degrees' % lr2i)
-
+        firestate = True
+        self.get_logger().info(f"{firestate} {lr2i} {laser_range[lr2i]}")
+        if laser_range[lr2i] < 0.5 and firestate:
+            msg = String()
+            msg.data = 'fire'
+            self.publisher_.publish(msg)
+            firestate = False
+            print("FIRE")
+        else:
+            msg = String()
+            msg.data = 'reset'
+            self.publisher_.publish(msg)
+            firestate = True
+            print("RESET")
+        time.sleep(2)
 
 def main(args=None):
     rclpy.init(args=args)
 
     scanner = Scanner()
-
     rclpy.spin(scanner)
 
     # Destroy the node explicitly
