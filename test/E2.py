@@ -13,10 +13,12 @@ GPIO.setup(pin, GPIO.OUT)
 
 try:
     while True:
+        print("HI")
         GPIO.output(pin, GPIO.HIGH)
         time.sleep(3)
+        print("BYE")
         GPIO.output(pin, GPIO.LOW)
-        time.sleep(3)
+        time.sleep(1)
 
 except KeyboardInterrupt:
     GPIO.cleanup()
