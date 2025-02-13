@@ -33,6 +33,7 @@ class Scanner(Node):
             qos_profile_sensor_data)
         self.subscription  # prevent unused variable warning
         self.publisher_ = self.create_publisher(String, 'topic', 10)
+        self.firestate = True
 
     def listener_callback(self, msg):
         self.get_logger().info('Shortest distance at degrees')
@@ -45,19 +46,18 @@ class Scanner(Node):
         lr2i = np.nanargmin(laser_range)
         
         # log the info
-        firestate = True
-        self.get_logger().info(f"{firestate} {lr2i} {laser_range[lr2i]}")
-        if laser_range[lr2i] < 0.5 and firestate:
+        self.get_logger().info(f"{self.firestate} {lr2i} {laser_range[lr2i]}")
+        if laser_range[lr2i] < 0.5 and self.firestate:
             msg = String()
             msg.data = 'fire'
             self.publisher_.publish(msg)
-            firestate = False
+            self.firestate = False
             print("FIRE")
         else:
             msg = String()
             msg.data = 'reset'
             self.publisher_.publish(msg)
-            firestate = True
+            self.firestate = True
             print("RESET")
         time.sleep(2)
 
