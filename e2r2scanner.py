@@ -47,13 +47,13 @@ class Scanner(Node):
         
         # log the info
         self.get_logger().info(f"{self.firestate} {lr2i} {laser_range[lr2i]}")
-        if laser_range[lr2i] < 0.5 and self.firestate:
+        if laser_range[lr2i] < 1 and self.firestate:
             msg = String()
             msg.data = 'fire'
             self.publisher_.publish(msg)
             self.firestate = False
             print("FIRE")
-        else:
+        elif laser_range[lr2i] > 1.1 and not self.firestate:
             msg = String()
             msg.data = 'reset'
             self.publisher_.publish(msg)
