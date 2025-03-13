@@ -3,7 +3,7 @@ import busio
 import board
 import adafruit_amg88xx
 i2c = busio.I2C(board.SCL, board.SDA)
-amg = adafruit.amg88xx.AMG88XX(i2c)
+amg = adafruit_amg88xx.AMG88XX(i2c)
 
 try:
     while True:
