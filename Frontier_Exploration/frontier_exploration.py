@@ -16,6 +16,7 @@ from tf import TransformListener
 from tf.transformations import euler_from_quaternion
 
 class FrontierExploration:
+    #TEST
     def __init__(self):
         rclpy.init_node("frontier_exploration")
 
