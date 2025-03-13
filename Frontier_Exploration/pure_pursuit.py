@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import math
-import rospy
+import roslibpy
 import numpy as np
 from path_planner import PathPlanner
 from std_msgs.msg import Header, Bool
@@ -16,32 +16,32 @@ class PurePursuit:
         """
         Class constructor
         """
-        rospy.init_node("pure_pursuit")
+        roslibpy.init_node("pure_pursuit")
 
         # Set if in debug mode
         self.is_in_debug_mode = (
-            rospy.has_param("~debug") and rospy.get_param("~debug") == "true"
+            roslibpy.has_param("~debug") and roslibpy.get_param("~debug") == "true"
         )
 
         # Publishers
-        self.cmd_vel = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-        self.lookahead_pub = rospy.Publisher(
+        self.cmd_vel = roslibpy.Publisher("/cmd_vel", Twist, queue_size=10)
+        self.lookahead_pub = roslibpy.Publisher(
             "/pure_pursuit/lookahead", PointStamped, queue_size=10
         )
 
         if self.is_in_debug_mode:
-            self.fov_cells_pub = rospy.Publisher(
+            self.fov_cells_pub = roslibpy.Publisher(
                 "/pure_pursuit/fov_cells", GridCells, queue_size=100
             )
-            self.close_wall_cells_pub = rospy.Publisher(
+            self.close_wall_cells_pub = roslibpy.Publisher(
                 "/pure_pursuit/close_wall_cells", GridCells, queue_size=100
             )
 
         # Subscribers
-        rospy.Subscriber("/odom", Odometry, self.update_odometry)
-        rospy.Subscriber("/map", OccupancyGrid, self.update_map)
-        rospy.Subscriber("/pure_pursuit/path", Path, self.update_path)
-        rospy.Subscriber("/pure_pursuit/enabled", Bool, self.update_enabled)
+        roslibpy.Subscriber("/odom", Odometry, self.update_odometry)
+        roslibpy.Subscriber("/map", OccupancyGrid, self.update_map)
+        roslibpy.Subscriber("/pure_pursuit/path", Path, self.update_path)
+        roslibpy.Subscriber("/pure_pursuit/enabled", Bool, self.update_enabled)
 
         # Pure pursuit parameters
         self.LOOKAHEAD_DISTANCE = 0.18  # m
@@ -77,7 +77,7 @@ class PurePursuit:
         """
         try:
             (trans, rot) = self.tf_listener.lookupTransform(
-                "/map", "/base_footprint", rospy.Time(0)
+                "/map", "/base_footprint", roslibpy.Time(0)
             )
         except:
             return
@@ -257,9 +257,9 @@ class PurePursuit:
         self.send_speed(0, 0)
 
     def run(self):
-        rospy.sleep(5)
+        roslibpy.sleep(5)
 
-        while not rospy.is_shutdown():
+        while not roslibpy.is_shutdown():
             if self.pose is None:
                 continue
 

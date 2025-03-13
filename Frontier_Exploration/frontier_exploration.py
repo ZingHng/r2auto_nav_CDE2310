@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import rospy
+import rclpy
 import rospkg
 import threading
 import subprocess
@@ -16,40 +16,37 @@ from tf import TransformListener
 from tf.transformations import euler_from_quaternion
 
 class FrontierExploration:
-def **init**(self):
-"""
-Class constructor
-"""
-rospy.init_node("frontier_exploration")
+    def __init__(self):
+        rclpy.init_node("frontier_exploration")
 
         # Set if in debug mode
         self.is_in_debug_mode = (
-            rospy.has_param("~debug") and rospy.get_param("~debug") == "true"
+            rclpy.has_param("~debug") and rclpy.get_param("~debug") == "true"
         )
 
         # Publishers
-        self.pure_pursuit_pub = rospy.Publisher(
+        self.pure_pursuit_pub = rclpy.Publisher(
             "/pure_pursuit/path", Path, queue_size=10
         )
 
         if self.is_in_debug_mode:
-            self.frontier_cells_pub = rospy.Publisher(
+            self.frontier_cells_pub = rclpy.Publisher(
                 "/frontier_exploration/frontier_cells", GridCells, queue_size=10
             )
-            self.start_pub = rospy.Publisher(
+            self.start_pub = rclpy.Publisher(
                 "/frontier_exploration/start", GridCells, queue_size=10
             )
-            self.goal_pub = rospy.Publisher(
+            self.goal_pub = rclpy.Publisher(
                 "/frontier_exploration/goal", GridCells, queue_size=10
             )
-            self.cspace_pub = rospy.Publisher("/cspace", GridCells, queue_size=10)
-            self.cost_map_pub = rospy.Publisher(
+            self.cspace_pub = rclpy.Publisher("/cspace", GridCells, queue_size=10)
+            self.cost_map_pub = rclpy.Publisher(
                 "/cost_map", OccupancyGrid, queue_size=10
             )
 
         # Subscribers
-        rospy.Subscriber("/odom", Odometry, self.update_odometry)
-        rospy.Subscriber("/map", OccupancyGrid, self.update_map)
+        rclpy.Subscriber("/odom", Odometry, self.update_odometry)
+        rclpy.Subscriber("/map", OccupancyGrid, self.update_map)
 
         self.tf_listener = TransformListener()
         self.lock = threading.Lock()
@@ -67,7 +64,7 @@ rospy.init_node("frontier_exploration")
         """
         try:
             (trans, rot) = self.tf_listener.lookupTransform(
-                "/map", "/base_footprint", rospy.Time(0)
+                "/map", "/base_footprint", rclpy.Time(0)
             )
         except:
             return
@@ -101,7 +98,7 @@ rospy.init_node("frontier_exploration")
         self.update_odometry()
 
         if self.pose is None:
-            rospy.logerr("Failed to get pose")
+            rclpy.logerr("Failed to get pose")
             return
 
         # Save the robot's position and orientation
@@ -126,7 +123,7 @@ rospy.init_node("frontier_exploration")
     def publish_cost_map(self, mapdata: OccupancyGrid, cost_map: np.ndarray):
         # Create an OccupancyGrid message
         grid = OccupancyGrid()
-        grid.header.stamp = rospy.Time.now()
+        grid.header.stamp = rclpy.Time.now()
         grid.header.frame_id = "map"
         grid.info.resolution = mapdata.info.resolution
         grid.info.width = cost_map.shape[1]
@@ -151,9 +148,9 @@ rospy.init_node("frontier_exploration")
             self.no_frontiers_found_counter >= self.NUM_EXPLORE_FAILS_BEFORE_FINISH
             or self.no_path_found_counter >= self.NUM_EXPLORE_FAILS_BEFORE_FINISH
         ):
-            rospy.loginfo("Done exploring!")
+            rclpy.loginfo("Done exploring!")
             self.save_map()
-            rospy.loginfo("Saved map")
+            rclpy.loginfo("Saved map")
             self.is_finished_exploring = True
 
     def explore_frontier(self, frontier_list: FrontierList):
@@ -165,7 +162,7 @@ rospy.init_node("frontier_exploration")
 
         # If no frontiers are found, check if finished exploring
         if not frontiers:
-            rospy.loginfo("No frontiers")
+            rclpy.loginfo("No frontiers")
             self.no_frontiers_found_counter += 1
             self.check_if_finished_exploring()
             return
@@ -202,7 +199,7 @@ rospy.init_node("frontier_exploration")
         goals = []
 
         # Log how many frontiers are being explored
-        rospy.loginfo(f"Exploring {len(top_frontiers)} frontiers")
+        rclpy.loginfo(f"Exploring {len(top_frontiers)} frontiers")
 
         for frontier in top_frontiers:
             # Get goal
@@ -238,20 +235,20 @@ rospy.init_node("frontier_exploration")
 
         # If a path was found, publish it
         if best_path:
-            rospy.loginfo(f"Found best path with cost {lowest_cost}")
+            rclpy.loginfo(f"Found best path with cost {lowest_cost}")
             start = best_path[0]
             path = PathPlanner.path_to_message(self.map, best_path)
             self.pure_pursuit_pub.publish(path)
             self.no_path_found_counter = 0
         # If no path was found, check if finished exploring
         else:
-            rospy.loginfo("No paths found")
+            rclpy.loginfo("No paths found")
             self.no_path_found_counter += 1
             self.check_if_finished_exploring()
 
     def run(self):
-        rate = rospy.Rate(20)  # Hz
-        while not rospy.is_shutdown():
+        rate = rclpy.Rate(20)  # Hz
+        while not rclpy.is_shutdown():
             if self.pose is None or self.map is None:
                 continue
 
@@ -276,5 +273,5 @@ rospy.init_node("frontier_exploration")
 
             rate.sleep()
 
-if **name** == "**main**":
-FrontierExploration().run()
+if __name__ == "__main__":
+    FrontierExploration().run()

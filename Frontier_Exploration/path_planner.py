@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
 import math
 import cv2
 import numpy as np
@@ -8,8 +8,8 @@ from typing import Union
 from std_msgs.msg import Header
 from nav_msgs.msg import GridCells, OccupancyGrid, Path
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
-from priority_queue import PriorityQueue
 from tf.transformations import quaternion_from_euler
+from priority_queue import PriorityQueue
 
 
 DIRECTIONS_OF_4 = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -292,7 +292,7 @@ class PathPlanner:
 
     @staticmethod
     def calc_cost_map(mapdata: OccupancyGrid) -> np.ndarray:
-        rospy.loginfo("Calculating cost map")
+        rclpy.loginfo("Calculating cost map")
 
         # Create numpy array from mapdata
         width = mapdata.info.width
