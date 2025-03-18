@@ -55,13 +55,14 @@ class SensorPublisher(Node):
         self.publisher_ = self.create_publisher(Float32MultiArray, 'sensor', 10)
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.get_logger().info("Publisher has started")
     def timer_callback(self):
         msg = Float32MultiArray()
-        '''pixels = np.array([])
-        for row in sensor.pixels:
-            pixels = pixels + row'''
-        msg.data = sensor.pixels
+        pixels = np.array(sensor.pixels)
+        pixels = np.reshape(pixels, 64)
+        msg.data = pixels.tolist()
         self.publisher_.publish(msg)
+        #print(msg)
         
 
 def main(args=None):

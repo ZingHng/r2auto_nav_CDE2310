@@ -19,8 +19,9 @@ class SensorSubscriber(Node):
         self.subscription  # prevent unused variable warning
 
     def listener_callback(self, msg):
-        self.get_logger().info(msg.data)
-        x = msg.data
+        #self.get_logger().info("receiving")
+        x = np.reshape(msg.data, (8, 8))
+        print(x)
         plt.imshow(x, cmap='hot', interpolation='nearest') 
         plt.draw()
         plt.pause(0.1)
