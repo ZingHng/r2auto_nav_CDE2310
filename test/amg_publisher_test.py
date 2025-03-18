@@ -56,7 +56,7 @@ class SensorPublisher(Node):
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
     def timer_callback(self):
-        msg = String()
+        msg = Float32MultiArray()
         '''pixels = np.array([])
         for row in sensor.pixels:
             pixels = pixels + row'''
