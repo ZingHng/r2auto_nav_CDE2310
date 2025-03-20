@@ -5,7 +5,6 @@ from geometry_msgs.msg import Twist # type: ignore
 from rclpy.qos import qos_profile_sensor_data # type: ignore
 from sensor_msgs.msg import LaserScan # type: ignore
 from nav_msgs.msg import OccupancyGrid # type: ignore
-import scipy.stats # type: ignore
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np 
