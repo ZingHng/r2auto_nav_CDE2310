@@ -1,6 +1,8 @@
 import RPi.GPIO as GPIO          
 from time import sleep
 
+# Code adapted from https://www.electronicshub.org/raspberry-pi-l298n-interface-tutorial-control-dc-motor-l298n-raspberry-pi/
+
 in1 = 20
 in2 = 16
 in3 = 16
