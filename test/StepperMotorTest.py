@@ -26,16 +26,17 @@ fullstep_seq = [
     [0,0,1,1],
     [1,0,0,1]]
 
-RUNNING = TRUE
-STEPSPERREV = 2048/4 # 512
+RUNNING = True
+STEPSPERREV = 512
 
 while RUNNING:
   x = input("Angle in degrees")
   try:
-    angle = int(float(x)/360*STEPSPERREV)
-  except TypeError:
-    RUNNING = FALSE
+    angle = int((float(x)/360)*STEPSPERREV)
+  except:
+    RUNNING = False
     angle = 0
+    GPIO.cleanup()
   for i in range(angle):
     for fullstep in range(4):
       for pin in range(4):
