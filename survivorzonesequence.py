@@ -136,34 +136,44 @@ class SurvivorZoneSequence(Node):
             self.fire_sequence()
 
     def looper(self):
-        counter = 1
-        while rclpy.ok():
-            self.get_logger().info(f"LOOP{counter}")
-            pixels = np.array(sensor.pixels)
-            pixel_grid = np.reshape(pixels, (8, 8))
-            print(pixel_grid)
-#            temp_msg = Float32MultiArray()
-#            self.temp_grid = np.reshape(pixels, 64)
-#            pixel_list = pixels.tolist()
-#            temp_msg.data = pixel_list
-#            self.temp_publisher.publish(temp_msg)
+        try:
+            counter = 1
+            while rclpy.ok():
+                self.get_logger().info(f"LOOP{counter}")
+                pixels = np.array(sensor.pixels)
+                pixel_grid = np.reshape(pixels, (8, 8))
+                print(pixel_grid)
+    #            temp_msg = Float32MultiArray()
+    #            self.temp_grid = np.reshape(pixels, 64)
+    #            pixel_list = pixels.tolist()
+    #            temp_msg.data = pixel_list
+    #            self.temp_publisher.publish(temp_msg)
 
-            self.get_logger().info(f"HA")
-            if not self.survivor_sequence and np.nanargmax(pixels) > MAXTEMP:
-                survivor_msg = String()
-                survivor_msg.data = True
-                self.survivor_sequence = True
-                self.survivor_publisher.publish(survivor_msg)
+                self.get_logger().info(f"HA")
+                if not self.survivor_sequence and np.nanargmax(pixels) > MAXTEMP:
+                    survivor_msg = String()
+                    survivor_msg.data = True
+                    self.survivor_sequence = True
+                    self.survivor_publisher.publish(survivor_msg)
 
-            self.get_logger().info(f"HA")
-            if self.survivor_sequence:
-                left_half, right_half = np.hsplit(pixels, 4)
-                self.approach_victim(left_half, right_half)
+                self.get_logger().info(f"HA")
+                if self.survivor_sequence:
+                    left_half, right_half = np.hsplit(pixels, 4)
+                    self.approach_victim(left_half, right_half)
 
-            self.get_logger().info(f"HA")
-            rclpy.spin_once(self)
-            self.get_logger().info(f"LOOP{counter} DONE")
-            counter += 1
+                self.get_logger().info(f"HA")
+                rclpy.spin_once(self)
+                self.get_logger().info(f"LOOP{counter} DONE")
+                counter += 1
+        except Exception as e:
+            print(e)
+                # Ctrl-c detected
+        finally:
+            twist = Twist()
+            twist.angular.z = 0
+            twist.linear.x = 0
+            time.sleep(0.5) # FOR VIBES
+            self.publisher_.publish(twist)
 
             
 
@@ -172,10 +182,7 @@ def main(args=None):
 
     node_name = SurvivorZoneSequence()
     node_name.looper()
-    twist = Twist()
-    twist.linear.x = 0
-    time.sleep(0.5) # FOR VIBES
-    node_name.publisher_.publish(twist)
+
     node_name.destroy_node()
     rclpy.shutdown()
 
