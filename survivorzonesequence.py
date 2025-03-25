@@ -116,6 +116,7 @@ class SurvivorZoneSequence(Node):
         time.sleep(3)
 
     def approach_victim(self, left, right):
+        self.get_logger().info("SURVIVOR SEQ MAIN")
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
@@ -154,8 +155,10 @@ class SurvivorZoneSequence(Node):
                     survivor_msg.data = True
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
+                    self.get_logger().info("VICTIMIZING")
 
                 if self.survivor_sequence:
+                    self.get_logger().info("SURVIVOR SEQ")
                     left_half, right_half = np.hsplit(pixels, 4)
                     self.approach_victim(left_half, right_half)
 
@@ -165,7 +168,7 @@ class SurvivorZoneSequence(Node):
                 counter += 1
         except Exception as e:
             print(e)
-                # Ctrl-c detected
+        # Ctrl-c detected
         finally:
             twist = Twist()
             twist.angular.z = 0.0
@@ -175,7 +178,6 @@ class SurvivorZoneSequence(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
     node_name = SurvivorZoneSequence()
     node_name.looper()
 
