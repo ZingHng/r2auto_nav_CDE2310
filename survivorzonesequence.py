@@ -143,14 +143,14 @@ class SurvivorZoneSequence(Node):
                 self.get_logger().info(f"LOOP{counter}")
                 pixels = np.array(sensor.pixels)
                 pixel_grid = np.reshape(pixels, (8, 8))
-                print(pixels.tolist()[np.nanargmax(pixels.tolist())])
+                print(np.max(pixels))
     #            temp_msg = Float32MultiArray()
     #            self.temp_grid = np.reshape(pixels, 64)
     #            pixel_list = pixels.tolist()
     #            temp_msg.data = pixel_list
     #            self.temp_publisher.publish(temp_msg)
                 
-                if not self.survivor_sequence and pixels[np.nanargmax(pixels.tolist())] > MAXTEMP:
+                if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
                     survivor_msg = String()
                     survivor_msg.data = True
                     self.survivor_sequence = True
