@@ -45,7 +45,7 @@ class SurvivorZoneSequence(Node):
             qos_profile_sensor_data)
         self.survivor_sequence = False
         self.temp_grid = None
-        self.laser_range = None
+        self.laser_range = np.array([])
 
     def scan_callback(self, msg):
         # self.get_logger().info('In scan_callback')
