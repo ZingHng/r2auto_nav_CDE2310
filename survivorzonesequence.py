@@ -159,7 +159,9 @@ class SurvivorZoneSequence(Node):
 
                 if self.survivor_sequence:
                     self.get_logger().info("SURVIVOR SEQ")
-                    left_half, right_half = np.hsplit(pixels, 4)
+                    postop = np.hsplit(pixels, 2)
+                    print(postop)
+                    left_half, right_half = postop
                     self.approach_victim(left_half, right_half)
 
                 rclpy.spin_once(self, timeout_sec=0.1)
