@@ -143,7 +143,7 @@ class SurvivorZoneSequence(Node):
                 self.get_logger().info(f"LOOP{counter}")
                 pixels = np.array(sensor.pixels)
                 pixel_grid = np.reshape(pixels, (8, 8))
-                print(pixel_grid)
+                print(np.nanargmax(pixels))
     #            temp_msg = Float32MultiArray()
     #            self.temp_grid = np.reshape(pixels, 64)
     #            pixel_list = pixels.tolist()
