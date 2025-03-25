@@ -138,7 +138,7 @@ class SurvivorZoneSequence(Node):
     def looper(self):
         try:
             counter = 1
-            while True:
+            while rclpy.ok():
                 self.get_logger().info(f"LOOP{counter}")
                 pixels = np.array(sensor.pixels)
                 pixel_grid = np.reshape(pixels, (8, 8))
@@ -148,20 +148,20 @@ class SurvivorZoneSequence(Node):
     #            pixel_list = pixels.tolist()
     #            temp_msg.data = pixel_list
     #            self.temp_publisher.publish(temp_msg)
-
-                self.get_logger().info(f"HA")
+                
+                self.get_logger().info(f"HA1")
                 if not self.survivor_sequence and np.nanargmax(pixels) > MAXTEMP:
                     survivor_msg = String()
                     survivor_msg.data = True
                     self.survivor_sequence = True
-                    self.survivor_publisher.publish(survivor_msg)
+                self.survivor_publisher.publish(survivor_msg)
 
-                self.get_logger().info(f"HA")
+                self.get_logger().info(f"HA2")
                 if self.survivor_sequence:
                     left_half, right_half = np.hsplit(pixels, 4)
                     self.approach_victim(left_half, right_half)
 
-                self.get_logger().info(f"HA")
+                self.get_logger().info(f"HA3")
                 rclpy.spin_once(self)
 
                 self.get_logger().info(f"LOOP{counter} DONE")
