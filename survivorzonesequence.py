@@ -151,7 +151,7 @@ class SurvivorZoneSequence(Node):
 #        time.sleep(0.1) # FOR VIBES, apparently
         self.publisher_.publish(twist)
         print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
-        if twist.linear.x == 0.0 and twist.angular.z == 0.0:
+        if (twist.linear.x == 0.0) and (twist.angular.z == 0.0): # TODO
             print("FIRE")
             self.fire_sequence()
 
