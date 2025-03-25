@@ -41,6 +41,7 @@ class SurvivorZoneSequence(Node):
         self.temp_grid = None
 
     def fire_sequence(self):
+
         GPIO.setmode(GPIO.BCM)
 
         in1 = 20
@@ -135,8 +136,13 @@ class SurvivorZoneSequence(Node):
             self.fire_sequence()
 
     def looper(self):
+        counter = 1
         while rclpy.ok():
+            self.get_logger().info(f"LOOP{counter}")
+            counter += 1
             pixels = np.array(sensor.pixels)
+            pixel_grid = np.reshape(pixels, (8, 8))
+            print(pixel_grid)
 #            temp_msg = Float32MultiArray()
 #            self.temp_grid = np.reshape(pixels, 64)
 #            pixel_list = pixels.tolist()
