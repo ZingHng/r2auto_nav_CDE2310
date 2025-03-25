@@ -11,7 +11,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import String, Float32MultiArray
-from std_msgs import Twist
+from geometry_msgs.msg import Twist
 import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import OccupancyGrid
