@@ -138,7 +138,7 @@ class SurvivorZoneSequence(Node):
     def looper(self):
         try:
             counter = 1
-            while rclpy.ok():
+            while True:
                 self.get_logger().info(f"LOOP{counter}")
                 pixels = np.array(sensor.pixels)
                 pixel_grid = np.reshape(pixels, (8, 8))
@@ -163,6 +163,7 @@ class SurvivorZoneSequence(Node):
 
                 self.get_logger().info(f"HA")
                 rclpy.spin_once(self)
+
                 self.get_logger().info(f"LOOP{counter} DONE")
                 counter += 1
         except Exception as e:
@@ -170,12 +171,10 @@ class SurvivorZoneSequence(Node):
                 # Ctrl-c detected
         finally:
             twist = Twist()
-            twist.angular.z = 0
-            twist.linear.x = 0
+            twist.angular.z = 0.0
+            twist.linear.x = 0.0
             time.sleep(0.5) # FOR VIBES
             self.publisher_.publish(twist)
-
-            
 
 def main(args=None):
     rclpy.init(args=args)
