@@ -152,7 +152,7 @@ class SurvivorZoneSequence(Node):
                 
                 if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
                     survivor_msg = String()
-                    survivor_msg.data = True
+                    survivor_msg.data = "HELP ME IM DYING"
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
                     self.get_logger().info("VICTIMIZING")
