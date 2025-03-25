@@ -11,6 +11,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import String, Float32MultiArray
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
@@ -37,8 +38,19 @@ class SurvivorZoneSequence(Node):
 #        self.temp_publisher = self.create_publisher(Float32MultiArray, 'temperature', 10)
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
         self.survivor_publisher = self.create_publisher(String, 'survivor', 10)
+        self.scan_subscription = self.create_subscription(
+            LaserScan,
+            'scan',
+            self.scan_callback,
+            qos_profile_sensor_data)
         self.survivor_sequence = False
         self.temp_grid = None
+
+    def scan_callback(self, msg):
+        # self.get_logger().info('In scan_callback')
+        # create numpy array
+        self.laser_range = np.array(msg.ranges)
+        self.laser_range[self.laser_range==0] = np.nan
 
     def fire_sequence(self):
 
@@ -182,7 +194,6 @@ def main(args=None):
     rclpy.init(args=args)
     node_name = SurvivorZoneSequence()
     node_name.looper()
-
     node_name.destroy_node()
     rclpy.shutdown()
 
