@@ -45,6 +45,7 @@ class SurvivorZoneSequence(Node):
             qos_profile_sensor_data)
         self.survivor_sequence = False
         self.temp_grid = None
+        self.laser_range = None
 
     def scan_callback(self, msg):
         # self.get_logger().info('In scan_callback')
@@ -172,6 +173,7 @@ class SurvivorZoneSequence(Node):
                 if self.survivor_sequence:
                     self.get_logger().info("SURVIVOR SEQ")
                     postop = np.hsplit(pixels, 2)
+                    print(pixels)
                     print(postop)
                     left_half, right_half = postop
                     self.approach_victim(left_half, right_half)
