@@ -34,14 +34,17 @@ p=GPIO.PWM(en,1000)
 p.start(25)
 
 def FlywheelStart():
-    GPIO.OUTPUT(in1, GPIO.HIGH)
-    GPIO.OUTPUT(in2, GPIO.LOW)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.output(in1, GPIO.HIGH)
+    GPIO.output(in2, GPIO.LOW)
 
 def FlywheelStop():
-    GPIO.OUTPUT(in1, GPIO.LOW)
-    GPIO.OUTPUT(in2, GPIO.LOW)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.output(in1, GPIO.LOW)
+    GPIO.output(in2, GPIO.LOW)
 
 def StepperTurn():
+    GPIO.setmode(GPIO.BCM)
     x = 90 #degrees
     angle = int((float(x)/360)*STEPSPERREV)
 
@@ -51,19 +54,22 @@ def StepperTurn():
                 GPIO.output(control_pins[pin], fullstep_seq[fullstep][pin])
             time.sleep(0.001)
 
-def main():
-    FlywheelStart()
-    time.sleep(2)
-    StepperTurn()
-    time.sleep(4)
-    StepperTurn()
-    time.sleep(2)
-    StepperTurn()
-    FlywheelStop()
-    GPIO.cleanup()
+while True:
+    try:
+        FlywheelStart()
+        time.sleep(2)
+        StepperTurn()
+        time.sleep(4)
+        StepperTurn()
+        time.sleep(2)
+        StepperTurn()
+        time.sleep(5)
+        FlywheelStop()
+        time.sleep(3)
+    except KeyboardInterrupt:
+        GPIO.cleanup()
 
-if __name__ == 'main':
-    main()
+
 
 
 #End the script and exit
