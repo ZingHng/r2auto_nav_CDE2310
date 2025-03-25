@@ -8,6 +8,7 @@ in2 = 16
 # in3 = 16
 # in4 = 20
 en = 21
+mospwm = 12
 
 #Stepper setup
 control_pins = [26,19,13,6]
@@ -32,6 +33,8 @@ GPIO.output(in1,GPIO.LOW)
 GPIO.output(in2,GPIO.LOW)
 p=GPIO.PWM(en,1000)
 p.start(25)
+ps = GPIO.PWM(mospwm, 1000)
+ps.start(0)
 
 def FlywheelStart():
     GPIO.setmode(GPIO.BCM)
@@ -42,6 +45,7 @@ def FlywheelStop():
     GPIO.setmode(GPIO.BCM)
     GPIO.output(in1, GPIO.LOW)
     GPIO.output(in2, GPIO.LOW)
+
 
 def StepperTurn():
     GPIO.setmode(GPIO.BCM)
@@ -56,6 +60,7 @@ def StepperTurn():
 
 while True:
     try:
+        ps.ChangeDutyCycle(75)
         FlywheelStart()
         time.sleep(2)
         StepperTurn()
@@ -65,6 +70,7 @@ while True:
         StepperTurn()
         time.sleep(5)
         FlywheelStop()
+        ps.ChangeDutyCycle(0)
         time.sleep(3)
     except KeyboardInterrupt:
         GPIO.cleanup()
