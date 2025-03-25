@@ -139,7 +139,6 @@ class SurvivorZoneSequence(Node):
         counter = 1
         while rclpy.ok():
             self.get_logger().info(f"LOOP{counter}")
-            counter += 1
             pixels = np.array(sensor.pixels)
             pixel_grid = np.reshape(pixels, (8, 8))
             print(pixel_grid)
@@ -158,7 +157,10 @@ class SurvivorZoneSequence(Node):
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 4)
                 self.approach_victim(left_half, right_half)
+            
             rclpy.spin_once(self)
+            self.get_logger().info(f"LOOP{counter} DONE")
+            counter += 1
 
             
 
@@ -174,10 +176,5 @@ def main(args=None):
     node_name.destroy_node()
     rclpy.shutdown()
 
-
 if __name__ == '__main__':
     main()
-
-
-
-
