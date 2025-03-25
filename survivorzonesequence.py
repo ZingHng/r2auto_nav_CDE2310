@@ -162,7 +162,7 @@ class SurvivorZoneSequence(Node):
                     self.approach_victim(left_half, right_half)
 
                 self.get_logger().info(f"HA3")
-                rclpy.spin_once(self)
+                rclpy.spin_once(self, timeout_sec=0.1)
 
                 self.get_logger().info(f"LOOP{counter} DONE")
                 counter += 1
