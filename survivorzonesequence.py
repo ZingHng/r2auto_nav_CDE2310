@@ -54,7 +54,7 @@ class SurvivorZoneSequence(Node):
         self.laser_range[self.laser_range==0] = np.nan
 
     def fire_sequence(self):
-
+        print("FIRE AAAAAAAAAAAAAA")
         GPIO.setmode(GPIO.BCM)
 
         in1 = 20
@@ -138,15 +138,21 @@ class SurvivorZoneSequence(Node):
         else:
             lr2i = 0
         lr = np.sum(left) - np.sum(right)
+        print(lr)
         if lr > TEMPDIFFTOLERANCE:
             twist.angular.z = ROTATECHANGE
+            print("LEFT")
         elif lr < -TEMPDIFFTOLERANCE:
             twist.angular.z = -ROTATECHANGE
+            print("RIGHT")
         elif self.laser_range[lr2i] > SAFETYDISTANCE:
+            print("GO")
             twist.linear.x = MAXSPEED
 #        time.sleep(0.1) # FOR VIBES, apparently
         self.publisher_.publish(twist)
+        print("PUBBED")
         if twist.linear.x == 0.0 and twist.angular.z == 0.0:
+            print("FIRE")
             self.fire_sequence()
 
     def looper(self):
@@ -172,10 +178,7 @@ class SurvivorZoneSequence(Node):
 
                 if self.survivor_sequence:
                     self.get_logger().info("SURVIVOR SEQ")
-                    postop = np.hsplit(pixels, 2)
-                    print(pixels)
-                    print(postop)
-                    left_half, right_half = postop
+                    left_half, right_half = np.hsplit(pixels, 2)
                     self.approach_victim(left_half, right_half)
 
                 rclpy.spin_once(self, timeout_sec=0.1)
