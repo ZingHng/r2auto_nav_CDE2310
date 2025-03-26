@@ -31,6 +31,7 @@ ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.250
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
+STEPSPERREV = 512
 
 class SurvivorZoneSequence(Node):
     def __init__(self):
@@ -74,9 +75,6 @@ class SurvivorZoneSequence(Node):
             [0,0,1,1],
             [1,0,0,1]]
 
-        RUNNING = True
-        STEPSPERREV = 512
-
         #DC motor setup
         GPIO.setup(in1,GPIO.OUT)
         GPIO.setup(in2,GPIO.OUT)
@@ -103,12 +101,10 @@ class SurvivorZoneSequence(Node):
             GPIO.output(in1, GPIO.LOW)
             GPIO.output(in2, GPIO.LOW)
 
-
         def StepperTurn():
             GPIO.setmode(GPIO.BCM)
             x = 90 #degrees
             angle = int((float(x)/360)*STEPSPERREV)
-
             for i in range(angle):
                 for fullstep in range(4):
                     for pin in range(4):
@@ -129,59 +125,51 @@ class SurvivorZoneSequence(Node):
         time.sleep(3)
 
     def approach_victim(self, left, right):
-        self.get_logger().info("SURVIVOR SEQ MAIN")
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         if self.laser_range.size != 0:
-            lr2i = np.nanargmin(self.laser_range)
+            lidar_shortest = np.nanmin(self.laser_range)
         else:
-            lr2i = 0
-        lr = np.sum(left) - np.sum(right)
-        print(lr)
-        if lr > TEMPDIFFTOLERANCE:
+            lidar_shortest = 0
+        left_sum = np.sum(left)
+        right_sum = np.sum(right)
+        left_right_error = left_sum - right_sum
+        print(f"left{left_sum} | right{right_sum}, error = {left_right_error}")
+        print(left_right_error)
+        if left_right_error > TEMPDIFFTOLERANCE:
             twist.angular.z = ROTATECHANGE
             print("LEFT")
-        elif lr < -TEMPDIFFTOLERANCE:
+        elif left_right_error < -TEMPDIFFTOLERANCE:
             twist.angular.z = -ROTATECHANGE
             print("RIGHT")
-        elif self.laser_range[lr2i] > SAFETYDISTANCE:
+        elif lidar_shortest > SAFETYDISTANCE:
             print("GO")
             twist.linear.x = MAXSPEED
 #        time.sleep(0.1) # FOR VIBES, apparently
         self.publisher_.publish(twist)
         print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
-        if (twist.linear.x == 0.0) and (twist.angular.z == 0.0): # TODO
+        if (twist.linear.x == 0.0) and (twist.angular.z == 0.0): # TODO BROKEN
             print("FIRE")
             self.fire_sequence()
+            print("FIRED")
 
     def looper(self):
         counter = 1
         while rclpy.ok():
             self.get_logger().info(f"LOOP{counter}")
             pixels = np.array(sensor.pixels)
-            pixel_grid = np.reshape(pixels, (8, 8))
-            print(np.max(pixels))
-#            temp_msg = Float32MultiArray()
-#            self.temp_grid = np.reshape(pixels, 64)
-#            pixel_list = pixels.tolist()
-#            temp_msg.data = pixel_list
-#            self.temp_publisher.publish(temp_msg)
             
             if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
                 survivor_msg = String()
                 survivor_msg.data = "HELP ME IM DYING"
                 self.survivor_sequence = True
                 self.survivor_publisher.publish(survivor_msg)
-                self.get_logger().info("VICTIMIZING")
 
             if self.survivor_sequence:
-                self.get_logger().info("SURVIVOR SEQ")
                 left_half, right_half = np.hsplit(pixels, 2)
                 self.approach_victim(left_half, right_half)
-
             rclpy.spin_once(self) # MAYBE TIMEOUT SEC 0.1 \ timeout_sec=0.1
-
             self.get_logger().info(f"LOOP{counter} DONE")
             counter += 1
 
