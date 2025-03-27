@@ -144,12 +144,11 @@ class SurvivorZoneSequence(Node):
             twist.angular.z = -ROTATECHANGE
             print("RIGHT")
         elif lidar_shortest > SAFETYDISTANCE:
-            print("GO")
+            print(f"GO {lidar_shortest}")
             twist.linear.x = MAXSPEED
-#        time.sleep(0.1) # FOR VIBES, apparently
         self.publisher_.publish(twist)
         print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
-        if (twist.linear.x == 0.0) and (twist.angular.z == 0.0): # TODO BROKEN
+        if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
             print("FIRE")
             self.fire_sequence()
             print("FIRED")
@@ -169,7 +168,7 @@ class SurvivorZoneSequence(Node):
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
                 self.approach_victim(left_half, right_half)
-            rclpy.spin_once(self) # MAYBE TIMEOUT SEC 0.1 \ timeout_sec=0.1
+            rclpy.spin_once(self, timeout_sec=0.1) # MAYBE TIMEOUT SEC 0.1 \ timeout_sec=0.1
             self.get_logger().info(f"LOOP{counter} DONE")
             counter += 1
 
