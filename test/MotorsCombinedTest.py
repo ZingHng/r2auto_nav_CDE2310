@@ -66,6 +66,7 @@ def StepperTurn():
 while True:
     try:
         ps.ChangeDutyCycle(75)
+        time.sleep(1)
         FlywheelStart()
         time.sleep(2)
         StepperTurn()
