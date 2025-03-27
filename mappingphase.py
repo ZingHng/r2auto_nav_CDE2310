@@ -13,23 +13,23 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import math
 import scipy.stats
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
+from geometry_msgs.msg import Point
 
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 minimum_frontier_length = 8
-stop_distance_from_dp = 8
 
 class Frontier(Node):
 
     def __init__(self):
         super().__init__('frontier')
-        self.subscription = self.create_subscription(
+        self.occ_subscription = self.create_subscription(
             OccupancyGrid,
             'map',
             self.occ_callback,
             qos_profile_sensor_data)
-        self.subscription  # prevent unused variable warning
+        self.occ_subscription  # prevent unused variable warning
         # used for finding robots position
         self.tfBuffer = tf2_ros.Buffer()
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
@@ -38,18 +38,23 @@ class Frontier(Node):
         self.odata = np.array([]) # store the 2D aaray of map from /map topic
         self.frontiercells = np.array([]) # store the cells that may be part of frontiers
         self.frontierlist = np.array([]) # store groups of cells that form frontiers
-        self.decisionpoint = None # (y, x) coordinates of next decision point
+        self.decisionpoint = None # (y, x) coordinates of next decision point 
+        self.pathfinderactive_subscription = self.create_subscription(
+            Bool,
+            'pathfinderactive',
+            self.pathfinderactive_callback,
+            10)
+        self.pathfinderactive_subscription
         self.makingdecision = True # whether robot is at decision point 
         self.mappingphase = True
 
-        self.publisher_ = self.create_publisher(String, 'decisionpoint', 10) # publishes new decision point for pathfinder node
+        self.dp_publisher_ = self.create_publisher(Point, 'decisionpoint', 10) # publishes new decision point for pathfinder node
+        self.mappingphase_publisher_ = self.create_publisher(Bool, 'mappingphaseactive', 10) # publishes that mapping phase is active, stops searching phase from commencing
+        self.map_origin = None
 
-
-    # later still need publish decisionpoint for pathfinding node
-    # later still need publish mappingphase FALSE for searching phase to be TRUE
-    
-
-
+    def pathfinderactive_callback(self, msg):
+        self.makingdecision = not (msg.data)
+        print('DECISION POINT')
 
     # occ_callback gets called each time there is an update to /map topic
     def occ_callback(self, msg):
@@ -59,9 +64,6 @@ class Frontier(Node):
         # and values between 50 and 100. The binned_statistic function will also
         # return the bin numbers so we can use that easily to create the image 
         occ_counts, edges, binnum = scipy.stats.binned_statistic(occdata, np.nan, statistic='count', bins=occ_bins) #tbh idk why there are 3 variables so imma just leave it
-        # get width and height of map from /map topic
-        mapwidth = msg.info.width
-        mapheight = msg.info.height
 
         # find transform to obtain base_link coordinates in the map frame
         # lookup_transform(target_frame, source_frame, time)
@@ -72,16 +74,24 @@ class Frontier(Node):
             return    
         cur_pos = trans.transform.translation # real world coordinates of robot relative to robot start point
 
-        map_origin = msg.info.origin.position # real world coordinates of the origin of map from /map topic relative to robot start point
+        if (self.map_origin is not None):
+            old_map_origin = self.map_origin # save previous map origin to update decision point relative to new map later
+        self.map_origin = msg.info.origin.position # real world coordinates of the origin of map from /map topic relative to robot start point
         map_res = msg.info.resolution # get map resolution
-        self.grid_x = round((cur_pos.x - map_origin.x) / map_res) # x position of robot on map from /map topic
-        self.grid_y = round(((cur_pos.y - map_origin.y) / map_res)) # y posiiton of robot on map from /map topic
+        self.grid_x = round((cur_pos.x - self.map_origin.x) / map_res) # x position of robot on map from /map topic
+        self.grid_y = round(((cur_pos.y - self.map_origin.y) / map_res)) # y posiiton of robot on map from /map topic
         # self.get_logger().info('Grid Y: %i Grid X: %i' % (self.grid_y, self.grid_x))
 
+        # update dp based on new map
+        if (self.decisionpoint is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
+            self.decisionpoint = (round(self.decisionpoint[0] + (old_map_origin.y - self.map_origin.y) / map_res), round(self.decisionpoint[1] + (old_map_origin.x - self.map_origin.x) / map_res))
+            
         # binnum go from 1 to 3 so we can use uint8
         # convert into 2D array using column order
         self.odata = np.uint8(binnum.reshape(msg.info.height,msg.info.width))
         self.odata[self.grid_y][self.grid_x] = 0 # set current robot location to 0 to see on the matplotlib
+        if (self.decisionpoint is not None):
+            self.odata[int(self.decisionpoint[0]), int(self.decisionpoint[1])] = 0 # set decision point location to 0 to see on the matplotlib
         img = Image.fromarray(self.odata) # create image from 2D array using PIL
 
         # show the image using grayscale map
@@ -90,17 +100,23 @@ class Frontier(Node):
         # pause to make sure the plot gets created
         plt.pause(0.00000000001)
 
+        
+            
+        
+
+        # send this code to pathfinder instead
+        '''
         # check if robot has reached decision point
         if (self.decisionpoint is not None):
             y_dist_to_dp, x_dist_to_dp = np.abs(self.grid_y - self.decisionpoint[0]), np.abs(self.grid_x - self.decisionpoint[1])
             if (y_dist_to_dp < stop_distance_from_dp) and (x_dist_to_dp < stop_distance_from_dp):
                 print('DECISION POINT')
                 self.makingdecision = True
+        '''
 
         print(f"self.grid_y: {self.grid_y}")
         print(f"self.grid_x: {self.grid_x}")
-        print(f"decision point: {self.decisionpoint}")
-        print(f"mapping phase: {self.mappingphase}")
+        print(f"self.decisionpoint: {self.decisionpoint}")
 
     def frontiersearch(self):        
         # 8 directions of neighbours
@@ -178,14 +194,18 @@ class Frontier(Node):
         # check if it is last decision point
         if (self.decisionpoint is not None) and (closest_coordinate is None):
             self.mappingphase = False
+            msg = Bool()
+            msg.data = self.mappingphase
+            self.mappingphase_publisher_.publish(msg)
         
         self.decisionpoint = closest_coordinate
-        msg = String()
-        msg.data = str(self.decisionpoint)
-        self.publisher_.publish(msg) # publish new dp for pathplanner
+        
         if (self.decisionpoint is not None):
             self.makingdecision = False
-
+            point = Point()
+            point.y = float(round(self.decisionpoint[0]))
+            point.x = float(round(self.decisionpoint[1]))
+            self.dp_publisher_.publish(point) # publish new dp for pathplanner
 
 def main(args=None):
     rclpy.init(args=args)
@@ -201,12 +221,8 @@ def main(args=None):
             frontier.frontiersearch()
             frontier.frontierselect()
         if (not frontier.mappingphase):
-            msg = String()
-            msg.data = ''
-            frontier.publisher_.publish(msg)
             break
-  
-    
+
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
