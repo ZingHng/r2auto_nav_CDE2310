@@ -16,11 +16,18 @@ for pin in control_pins:
     GPIO.setup(pin, GPIO.OUT)
     GPIO.output(pin, 0)
 
-fullstep_seq = [
+
+'''fullstep_seq = [
     [1,1,0,0],
     [0,1,1,0],
     [0,0,1,1],
-    [1,0,0,1]]
+    [1,0,0,1]]''' # reversed
+
+fullstep_seq = [
+    [1,0,0,1],
+    [0,0,1,1],
+    [0,1,1,0],
+    [1,1,0,0]]
 
 RUNNING = True
 STEPSPERREV = 512
@@ -66,7 +73,7 @@ def StepperTurn():
 while True:
     try:
         ps.ChangeDutyCycle(75)
-        time.sleep(1)
+        time.sleep(2)
         FlywheelStart()
         time.sleep(2)
         StepperTurn()
