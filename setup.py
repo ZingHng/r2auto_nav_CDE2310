@@ -27,6 +27,8 @@ setup(
             'r2occupancy2 = auto_nav.r2occupancy2:main',
             'r2auto_nav = auto_nav.r2auto_nav:main',
             'e2r2scanner = auto_nav.e2r2scanner:main',
+            'mappingphase = auto_nav.mappingphase:main',
+            'pathfinder = auto_nav.pathfinder:main',
         ],
     },
 )
