@@ -9,7 +9,7 @@ from geometry_msgs.msg import Point
 from sensor_msgs.msg import LaserScan
 import numpy as np
 import tf2_ros
-from tf2_ros import LookupException, ConnectivityException,s ExtrapolationException
+from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 import matplotlib.pyplot as plt
 from PIL import Image
 import math
