@@ -18,7 +18,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 
 from firing import fire_sequence
 
-MAXSPEED = 0.05
+DELTASPEED = 0.05
 MAXTEMP = 32.0
 ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.250
@@ -51,21 +51,16 @@ class Ramp(Node):
     def __init__(self):
         super().__init__('Ramp')
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
-        self.survivor_publisher = self.create_publisher(String, 'survivor', 10)
         self.scan_subscription = self.create_subscription(
             LaserScan,
             'scan',
             self.scan_callback,
             qos_profile_sensor_data)
-        
         self.odom_subscription = self.create_subscription(
             Odometry,
             'odom',
             self.odom_callback,
             10)
-        # self.get_logger().info('Created subscriber')
-        self.odom_subscription  # prevent unused variable warning
-        # initialize variables
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
@@ -81,27 +76,42 @@ class Ramp(Node):
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
 
-
     def calibrate(self):
-
+        pass
 
     def looper(self):
         counter = 1
         while rclpy.ok():
-            self.get_logger().info(f"LOOP{counter}")
+            print(f"LOOP{counter}")
             pixels = np.array(sensor.pixels)
-            
-            if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
-                survivor_msg = String()
-                survivor_msg.data = "HELP ME IM DYING"
-                self.survivor_sequence = True
-                self.survivor_publisher.publish(survivor_msg)
 
-            if self.survivor_sequence:
-                left_half, right_half = np.hsplit(pixels, 2)
-                self.survivor_sequence = self.approach_victim(left_half, right_half)
-            rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
-            self.get_logger().info(f"LOOP{counter} DONE")
+            self.roll, self.pitch, self.yaw
+            
+            if np.max(pixels) < MAXTEMP: # INSECT BEHAVIOUR
+                twist = Twist()
+                twist.linear.x = 0.0
+                twist.angular.z = 0.0
+                if self.laser_range.size != 0:
+                    lidar_shortest = np.nanmin(self.laser_range)
+                else:
+                    lidar_shortest = 0
+                left, right = np.hsplit(pixels, 2)
+                left_right_error = np.sum(left) - np.sum(right)
+                if left_right_error > TEMPDIFFTOLERANCE:
+                    twist.angular.z = ROTATECHANGE
+                elif left_right_error < -TEMPDIFFTOLERANCE:
+                    twist.angular.z = -ROTATECHANGE
+                elif lidar_shortest > SAFETYDISTANCE:
+                    twist.linear.x = DELTASPEED
+                self.publisher_.publish(twist)
+                print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
+                if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
+                    print("FIRE")
+                    fire_sequence()
+                    print("FIRED")
+                    return False
+            rclpy.spin_once(self) # timeout_sec=0.1 in case lidar doesnt work
+            print(f"LOOP{counter} DONE")
             counter += 1
 
 def main(args=None):
@@ -111,3 +121,6 @@ def main(args=None):
     node_name.looper()
     node_name.destroy_node()
     rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

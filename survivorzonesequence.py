@@ -16,14 +16,18 @@ import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import OccupancyGrid
 
+import tf2_ros
+from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
+
 from firing import fire_sequence
 
-MAXSPEED = 0.05
+DELTASPEED = 0.05
 MAXTEMP = 32.0
 ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.250
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
+FIRINGSAFETYZONESQ = 1
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -44,10 +48,34 @@ class SurvivorZoneSequence(Node):
         self.survivor_sequence = False
         self.temp_grid = None
         self.laser_range = np.array([])
+        self.activations = []
+        self.tfBuffer = tf2_ros.Buffer()
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
         self.laser_range[self.laser_range==0] = np.nan
+    
+    def rotatebot(self, rot_angle):
+        twist = Twist()
+        current_yaw = self.yaw
+        c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
+        target_yaw = current_yaw + math.radians(rot_angle)
+        c_target_yaw = complex(math.cos(target_yaw),math.sin(target_yaw))
+        c_change = c_target_yaw / c_yaw
+        c_change_dir = np.sign(c_change.imag)
+        twist.linear.x = 0.0
+        twist.angular.z = c_change_dir * ROTATECHANGE
+        self.publisher_.publish(twist)
+        c_dir_diff = c_change_dir
+        while(c_change_dir * c_dir_diff > 0):
+            rclpy.spin_once(self)
+            current_yaw = self.yaw
+            c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
+            c_change = c_target_yaw / c_yaw
+            c_dir_diff = np.sign(c_change.imag)
+        self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
+        twist.angular.z = 0.0
+        self.publisher_.publish(twist)
 
     def approach_victim(self, left, right):
         twist = Twist()
@@ -66,7 +94,7 @@ class SurvivorZoneSequence(Node):
         elif left_right_error < -TEMPDIFFTOLERANCE:
             twist.angular.z = -ROTATECHANGE
         elif lidar_shortest > SAFETYDISTANCE:
-            twist.linear.x = MAXSPEED
+            twist.linear.x = DELTASPEED
         self.publisher_.publish(twist)
         print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
         if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
@@ -75,22 +103,41 @@ class SurvivorZoneSequence(Node):
             print("FIRED")
             return False
         return True
-
+    
+    def current_position(self):
+        try:
+            trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
+        except (LookupException, ConnectivityException, ExtrapolationException) as e:
+            self.get_logger().info('No transformation found')
+            return    
+        return trans.transform.translation # real world coordinates of robot relative to robot start point
+    
     def looper(self):
         counter = 1
         while rclpy.ok():
             self.get_logger().info(f"LOOP{counter}")
             pixels = np.array(sensor.pixels)
-            
             if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
-                survivor_msg = String()
-                survivor_msg.data = "HELP ME IM DYING"
-                self.survivor_sequence = True
-                self.survivor_publisher.publish(survivor_msg)
+                x, y = self.current_position()
+                nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations])
+                if nearest_fire > FIRINGSAFETYZONESQ:
+                    survivor_msg = String()
+                    survivor_msg.data = "FOUND"
+                    self.survivor_sequence = True
+                    self.survivor_publisher.publish(survivor_msg)
+                else:
+                    print(f"Too close to past firing: current=({x, y}) nearest={nearest_fire}")
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
-                self.survivor_sequence = self.approach_victim(left_half, right_half)
+                stay_survivor_sequence = self.approach_victim(left_half, right_half)
+                if not stay_survivor_sequence:
+                    survivor_msg = String()
+                    survivor_msg.data = "RESCUED"
+                    self.survivor_publisher.publish(survivor_msg)
+                    self.activations.append(self.current_position())
+                    self.rotatebot(180)
+
             rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             self.get_logger().info(f"LOOP{counter} DONE")
             counter += 1

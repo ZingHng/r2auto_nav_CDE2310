@@ -17,17 +17,17 @@ for pin in control_pins:
     GPIO.output(pin, 0)
 
 
-'''fullstep_seq = [
+fullstep_seq = [
     [1,1,0,0],
     [0,1,1,0],
     [0,0,1,1],
-    [1,0,0,1]]''' # reversed
+    [1,0,0,1]] # reversed
 
-fullstep_seq = [
+'''fullstep_seq = [
     [1,0,0,1],
     [0,0,1,1],
     [0,1,1,0],
-    [1,1,0,0]]
+    [1,1,0,0]]'''
 
 RUNNING = True
 STEPSPERREV = 512
@@ -41,8 +41,8 @@ GPIO.output(in2,GPIO.LOW)
 GPIO.setup(mospwm,GPIO.OUT)
 p=GPIO.PWM(en,1000)
 p.start(25)
-ps = GPIO.PWM(mospwm, 1000)
-ps.start(0)
+#ps = GPIO.PWM(mospwm, 1000)
+#ps.start(0)
 
 def FlywheelStart():
     GPIO.setmode(GPIO.BCM)
@@ -72,7 +72,7 @@ def StepperTurn():
 
 while True:
     try:
-        ps.ChangeDutyCycle(75)
+        #ps.ChangeDutyCycle(75)
         time.sleep(2)
         FlywheelStart()
         time.sleep(2)
@@ -83,7 +83,7 @@ while True:
         StepperTurn()
         time.sleep(5)
         FlywheelStop()
-        ps.ChangeDutyCycle(0)
+        #ps.ChangeDutyCycle(0)
         time.sleep(3)
     except KeyboardInterrupt:
         GPIO.cleanup()
