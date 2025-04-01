@@ -18,10 +18,10 @@ def fire_sequence():
         GPIO.output(pin, 0)
 
     fullstep_seq = [
-        [1,0,0,1],
-        [0,0,1,1],
+        [1,1,0,0],
         [0,1,1,0],
-        [1,1,0,0]]
+        [0,0,1,1],
+        [1,0,0,1]]
 
     #DC motor setup
     GPIO.setup(in1,GPIO.OUT)
