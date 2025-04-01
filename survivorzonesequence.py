@@ -117,16 +117,22 @@ class SurvivorZoneSequence(Node):
                     time.sleep(0.001)
         
         ps.ChangeDutyCycle(75)
+        print("Flywheel Start")
         FlywheelStart()
         time.sleep(2)
+        print("Stepper Turn")
         StepperTurn()
         time.sleep(4)
+        print("Stepper Turn")
         StepperTurn()
         time.sleep(2)
+        print("Stepper Turn")
         StepperTurn()
         time.sleep(5)
+        print("Flywheel Stop")
         FlywheelStop()
         ps.ChangeDutyCycle(0)
+        print("Rest")
         time.sleep(3)
 
     def approach_victim(self, left, right):
