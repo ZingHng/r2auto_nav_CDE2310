@@ -35,12 +35,6 @@ def euler_from_quaternion(x, y, z, w):
 class RollPitchYaw(Node):
     def __init__(self):
         super().__init__('RollPitchYaw')
-        self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
-        self.scan_subscription = self.create_subscription(
-            LaserScan,
-            'scan',
-            self.scan_callback,
-            qos_profile_sensor_data)
         self.odom_subscription = self.create_subscription(
             Odometry,
             'odom',
