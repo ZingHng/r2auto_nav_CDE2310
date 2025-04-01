@@ -157,6 +157,8 @@ class SurvivorZoneSequence(Node):
             print("FIRE")
             self.fire_sequence()
             print("FIRED")
+            return False
+        return True
 
     def looper(self):
         counter = 1
@@ -172,8 +174,8 @@ class SurvivorZoneSequence(Node):
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
-                self.approach_victim(left_half, right_half)
-            rclpy.spin_once(self, timeout_sec=0.1) # MAYBE TIMEOUT SEC 0.1 \ timeout_sec=0.1
+                self.survivor_sequence = self.approach_victim(left_half, right_half)
+            rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             self.get_logger().info(f"LOOP{counter} DONE")
             counter += 1
 
