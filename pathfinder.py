@@ -9,7 +9,7 @@ from geometry_msgs.msg import Point
 from sensor_msgs.msg import LaserScan
 import numpy as np
 import tf2_ros
-from tf2_ros import LookupException, ConnectivityException,s ExtrapolationException
+from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 import matplotlib.pyplot as plt
 from PIL import Image
 import math
@@ -107,7 +107,7 @@ class AStar:
                                     self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 7000) # 7 cells away
                                 elif dist == 8:
                                     self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 5000) # 8 cells away
-                                
+                               
     def print(self):
         pathmap = self.grid
         pathmap[self.start[0]][self.start[1]] = 0
@@ -117,7 +117,8 @@ class AStar:
         img = Image.fromarray(pathmap) # create image from 2D array using PIL
 
         # show the image using grayscale map
-        plt.imshow(img, cmap='gray', origin='lower')
+        plt.imshow(img, cmap='magma', origin='lower')
+        plt.colorbar()
         plt.draw_all()
         # pause to make sure the plot gets created
         plt.pause(1)
