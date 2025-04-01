@@ -54,3 +54,13 @@ class RollPitchYaw(Node):
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
         print(f"roll={self.roll}, pitch{self.pitch}, yaw={self.yaw}")
+
+def main(args=None):
+    rclpy.init(args=args)
+    node_name = RollPitchYaw()
+    rclpy.spin(node_name)
+    node_name.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

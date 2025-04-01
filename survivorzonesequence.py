@@ -125,6 +125,8 @@ class SurvivorZoneSequence(Node):
                     survivor_msg.data = "FOUND"
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
+                else:
+                    print(f"Too close to past firing: current=({x, y}) nearest={nearest_fire}")
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
