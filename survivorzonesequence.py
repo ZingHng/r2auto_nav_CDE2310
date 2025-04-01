@@ -25,7 +25,7 @@ os.putenv("SDL_FBDEV", "/dev/fb1")
 # initialize the sensor
 sensor = adafruit_amg88xx.AMG88XX(i2c_bus)
 
-MAXSPEED = -0.05
+MAXSPEED = 0.05
 MAXTEMP = 32.0
 ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.250
@@ -146,16 +146,12 @@ class SurvivorZoneSequence(Node):
         left_sum = np.sum(left)
         right_sum = np.sum(right)
         left_right_error = left_sum - right_sum
-        print(f"left{left_sum} | right{right_sum}, error = {left_right_error}")
-        print(left_right_error)
+        print(f"left{left_sum} | right{right_sum}, error = {left_right_error}, lidar_min = {lidar_shortest}")
         if left_right_error > TEMPDIFFTOLERANCE:
             twist.angular.z = ROTATECHANGE
-            print("LEFT")
         elif left_right_error < -TEMPDIFFTOLERANCE:
             twist.angular.z = -ROTATECHANGE
-            print("RIGHT")
         elif lidar_shortest > SAFETYDISTANCE:
-            print(f"GO {lidar_shortest}")
             twist.linear.x = MAXSPEED
         self.publisher_.publish(twist)
         print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
