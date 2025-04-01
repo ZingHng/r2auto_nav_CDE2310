@@ -174,12 +174,12 @@ class AutoNav(Node):
             current_yaw = self.yaw
             # convert the current yaw to complex form
             c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
-            # self.get_logger().info('Current Yaw: %f' % math.degrees(current_yaw))
+            self.get_logger().info('Current Yaw: %f' % math.degrees(current_yaw))
             # get difference in angle between current and target
             c_change = c_target_yaw / c_yaw
             # get the sign to see if we can stop
             c_dir_diff = np.sign(c_change.imag)
-            # self.get_logger().info('c_change_dir: %f c_dir_diff: %f' % (c_change_dir, c_dir_diff))
+            self.get_logger().info('c_change_dir: %f c_dir_diff: %f' % (c_change_dir, c_dir_diff))
 
         self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         # set the rotation speed to 0
@@ -206,8 +206,7 @@ class AutoNav(Node):
         twist = Twist()
         twist.linear.x = speedchange
         twist.angular.z = 0.0
-        # not sure if this is really necessary, but things seem to work more
-        # reliably with this
+        # not sure if this is really necessary, but things seem to work more reliably with this
         time.sleep(1)
         self.publisher_.publish(twist)
 

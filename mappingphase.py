@@ -19,6 +19,7 @@ from geometry_msgs.msg import Point
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 minimum_frontier_length = 8
+do_not_cross_line = 2
 
 class Frontier(Node):
 
@@ -85,10 +86,17 @@ class Frontier(Node):
         # update dp based on new map
         if (self.decisionpoint is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
             self.decisionpoint = (round(self.decisionpoint[0] + (old_map_origin.y - self.map_origin.y) / map_res), round(self.decisionpoint[1] + (old_map_origin.x - self.map_origin.x) / map_res))
-            
+
         # binnum go from 1 to 3 so we can use uint8
         # convert into 2D array using column order
         self.odata = np.uint8(binnum.reshape(msg.info.height,msg.info.width))
+
+        # draw do not cross line as wall so that robot does not see ramp as frontier
+        if msg.info.height > round(do_not_cross_line / map_res):
+            start_row = round(do_not_cross_line / map_res)
+            for row in range(start_row, msg.info.height):
+                self.odata[row] = [3] * msg.info.width
+
         self.odata[self.grid_y][self.grid_x] = 0 # set current robot location to 0 to see on the matplotlib
         if (self.decisionpoint is not None):
             self.odata[int(self.decisionpoint[0]), int(self.decisionpoint[1])] = 0 # set decision point location to 0 to see on the matplotlib

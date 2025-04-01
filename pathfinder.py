@@ -20,9 +20,9 @@ import time
 
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
-stop_distance_from_dp = 15 # distance from decision point to stop pathfinder
-stop_distance_from_wp = 5 # distance from waypoint to change to next waypoint
-stop_distance_from_obstacle = 0.15 # distance to killpathfinder
+stop_distance_from_dp = 8 # distance from decision point to stop pathfinder
+stop_distance_from_wp = 4 # distance from waypoint to change to next waypoint
+stop_distance_from_obstacle = 0.18 # distance to killpathfinder
 waypoint_gap = 4 # number of grids between pure pursuit waypoints
 rotatechange = 0.2 # speed of rotation
 speedchange = 0.1 # speed of linear movement
@@ -96,17 +96,17 @@ class AStar:
                                 elif dist == 2:
                                     self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 100000) # 2 cells away
                                 elif dist == 3:
-                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 70000) # 3 cells away
+                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 90000) # 3 cells away
                                 elif dist == 4:
-                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 50000) # 4 cells away
+                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 80000) # 4 cells away
                                 elif dist == 5:
-                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 25000) # 5 cells away
+                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 65000) # 5 cells away
                                 elif dist == 6:
-                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 10000) # 6 cells away
+                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 50000) # 6 cells away
                                 elif dist == 7:
-                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 7000) # 7 cells away
+                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 35000) # 7 cells away
                                 elif dist == 8:
-                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 5000) # 8 cells away
+                                    self.wallprox_costmap[ny][nx] = max(self.wallprox_costmap[ny][nx], 20000) # 8 cells away
                                
     def print(self):
         pathmap = self.grid
@@ -118,7 +118,6 @@ class AStar:
 
         # show the image using grayscale map
         plt.imshow(img, cmap='magma', origin='lower')
-        plt.colorbar()
         plt.draw_all()
         # pause to make sure the plot gets created
         plt.pause(1)
@@ -212,6 +211,7 @@ class Pathfinder(Node):
         self.pitch = 0
         self.yaw = 0
         
+        
         # create subscription to track lidar
         self.scan_subscription = self.create_subscription(
             LaserScan,
@@ -225,6 +225,7 @@ class Pathfinder(Node):
         #self.get_logger().info('In odom_callback')
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
+        #print(f"Self.yaw: {self.yaw}")
 
     def scan_callback(self, msg):
         # self.get_logger().info('In scan_callback')
@@ -234,6 +235,8 @@ class Pathfinder(Node):
         # replace 0's with nan
         self.laser_range[self.laser_range==0] = np.nan
         lr2i = np.nanargmin(self.laser_range)
+        # print(lr2i)
+        # np.savetxt('laser.txt', self.laser_range)
         
         # log the info
         if self.laser_range[lr2i] < stop_distance_from_obstacle:
@@ -295,7 +298,7 @@ class Pathfinder(Node):
         # update decision point if map origin changes
         if (self.decisionpoint is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
             self.decisionpoint = (round(self.decisionpoint[0] + (old_map_origin.y - self.map_origin.y) / map_res), round(self.decisionpoint[1] + (old_map_origin.x - self.map_origin.x) / map_res))
-            print(f"Decisionpoint: {self.decisionpoint}")
+            print(f"Transformed Decisionpoint: {self.decisionpoint}")
 
         # update path if map origin changes
         if (self.waypoints is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
@@ -369,10 +372,10 @@ class Pathfinder(Node):
             # not sure if this is really necessary, but things seem to work more reliably with this
             time.sleep(0.5)
             self.publisher_.publish(twist)
+            print('moving forward')
 
             reachedwaypoint = False
-            while (not reachedwaypoint):
-                rclpy.spin_once(self)
+            while (not reachedwaypoint) and self.pathfinderactive:
                 y_dist_to_wp = np.abs(self.grid_y - currentwaypoint[0])
                 x_dist_to_wp = np.abs(self.grid_x - currentwaypoint[1])
                 if (y_dist_to_wp < stop_distance_from_wp) and (x_dist_to_wp < stop_distance_from_wp):
@@ -381,6 +384,7 @@ class Pathfinder(Node):
                     twist.linear.x = 0.0
                     twist.angular.z = 0.0
                     self.publisher_.publish(twist)
+                rclpy.spin_once(self)
         self.killpathfinder()
 
     def rotatebot(self, rot_angle):
@@ -416,7 +420,7 @@ class Pathfinder(Node):
         # becomes -1.0, and vice versa
        
     
-        while(c_change_dir * c_dir_diff > 0):
+        while(c_change_dir * c_dir_diff > 0) and self.pathfinderactive:
             # allow the callback functions to run
             rclpy.spin_once(self)
             current_yaw = self.yaw
@@ -439,7 +443,12 @@ class Pathfinder(Node):
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
+        self.publisher_.publish(twist)
         # time.sleep(1)
+        twist.linear.x = -speedchange
+        self.publisher_.publish(twist)
+        time.sleep(1)
+        twist.linear.x = 0.0
         self.publisher_.publish(twist)
         self.killpathfinder()
         
@@ -457,7 +466,7 @@ def main(args=None):
     while True:
         olddp = pathfinder.decisionpoint
         rclpy.spin_once(pathfinder)
-        if (not pathfinder.pathfinderactive) and (pathfinder.decisionpoint is not None) and (pathfinder.decisionpoint is not olddp):
+        if (not pathfinder.pathfinderactive) and (pathfinder.decisionpoint is not None): 
             pathfinder.pathfinderactive = True
             print('Pathfinderactive')
             pathfinder.createpath()
