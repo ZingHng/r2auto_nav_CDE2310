@@ -25,7 +25,7 @@ os.putenv("SDL_FBDEV", "/dev/fb1")
 # initialize the sensor
 sensor = adafruit_amg88xx.AMG88XX(i2c_bus)
 
-MAXSPEED = -0.05
+MAXSPEED = 0.05
 MAXTEMP = 32.0
 ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.250
@@ -117,16 +117,22 @@ class SurvivorZoneSequence(Node):
                     time.sleep(0.001)
         
         ps.ChangeDutyCycle(75)
+        print("Flywheel Start")
         FlywheelStart()
         time.sleep(2)
+        print("Stepper Turn")
         StepperTurn()
         time.sleep(4)
+        print("Stepper Turn")
         StepperTurn()
         time.sleep(2)
+        print("Stepper Turn")
         StepperTurn()
         time.sleep(5)
+        print("Flywheel Stop")
         FlywheelStop()
         ps.ChangeDutyCycle(0)
+        print("Rest")
         time.sleep(3)
 
     def approach_victim(self, left, right):
@@ -140,16 +146,12 @@ class SurvivorZoneSequence(Node):
         left_sum = np.sum(left)
         right_sum = np.sum(right)
         left_right_error = left_sum - right_sum
-        print(f"left{left_sum} | right{right_sum}, error = {left_right_error}")
-        print(left_right_error)
+        print(f"left{left_sum} | right{right_sum}, error = {left_right_error}, lidar_min = {lidar_shortest}")
         if left_right_error > TEMPDIFFTOLERANCE:
             twist.angular.z = ROTATECHANGE
-            print("LEFT")
         elif left_right_error < -TEMPDIFFTOLERANCE:
             twist.angular.z = -ROTATECHANGE
-            print("RIGHT")
         elif lidar_shortest > SAFETYDISTANCE:
-            print(f"GO {lidar_shortest}")
             twist.linear.x = MAXSPEED
         self.publisher_.publish(twist)
         print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
@@ -157,6 +159,8 @@ class SurvivorZoneSequence(Node):
             print("FIRE")
             self.fire_sequence()
             print("FIRED")
+            return False
+        return True
 
     def looper(self):
         counter = 1
@@ -172,8 +176,8 @@ class SurvivorZoneSequence(Node):
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
-                self.approach_victim(left_half, right_half)
-            rclpy.spin_once(self, timeout_sec=0.1) # MAYBE TIMEOUT SEC 0.1 \ timeout_sec=0.1
+                self.survivor_sequence = self.approach_victim(left_half, right_half)
+            rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             self.get_logger().info(f"LOOP{counter} DONE")
             counter += 1
 
