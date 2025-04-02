@@ -193,6 +193,7 @@ class Pathfinder(Node):
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
         self.map_origin = None
         self.waypoints = None
+        self.reachedwaypoint = False
 
 
 
@@ -309,12 +310,15 @@ class Pathfinder(Node):
             print(f"Transformed Waypoints: {self.waypoints}")
 
     def killpathfinder(self):
-        print('killpathfinder')
-        self.pathfinderactive = False
         self.waypoints = []
-        msg = Bool()
-        msg.data = self.pathfinderactive
-        self.pathfinderactive_publisher_.publish(msg)
+        if (self.reachedwaypoint == True):
+            print('killpathfinder')
+            self.pathfinderactive = False            
+            msg = Bool()
+            msg.data = self.pathfinderactive
+            self.pathfinderactive_publisher_.publish(msg)
+        else:
+            print('loading new path')
 
     def createpath(self):
         start = (self.grid_y, self.grid_x)
@@ -374,12 +378,11 @@ class Pathfinder(Node):
             self.publisher_.publish(twist)
             print('moving forward')
 
-            reachedwaypoint = False
             while (not reachedwaypoint) and self.pathfinderactive:
                 y_dist_to_wp = np.abs(self.grid_y - currentwaypoint[0])
                 x_dist_to_wp = np.abs(self.grid_x - currentwaypoint[1])
                 if (y_dist_to_wp < stop_distance_from_wp) and (x_dist_to_wp < stop_distance_from_wp):
-                    reachedwaypoint = True
+                    self.reachedwaypoint = True
                     twist = Twist()
                     twist.linear.x = 0.0
                     twist.angular.z = 0.0
@@ -440,20 +443,20 @@ class Pathfinder(Node):
         self.publisher_.publish(twist)
 
     def obstacleavoidance(self):
+        # retreat from obstacle slightly
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
-        # time.sleep(1)
         twist.linear.x = -speedchange
         self.publisher_.publish(twist)
-        time.sleep(1)
+        time.sleep(0.5)
         twist.linear.x = 0.0
         self.publisher_.publish(twist)
+        # kill current pathfinder process
         self.killpathfinder()
-        
-        #still need to code the recovery actions
-        
+        # purepursuit() will end with self.reachedwaypoint = False
+        # in main, new path will be created to the same deicison point and pure pursuit will follow
 
 
 def main(args=None): 
@@ -464,13 +467,18 @@ def main(args=None):
     plt.show()
 
     while True:
-        olddp = pathfinder.decisionpoint
+        # olddp = pathfinder.decisionpoint
         rclpy.spin_once(pathfinder)
         if (not pathfinder.pathfinderactive) and (pathfinder.decisionpoint is not None): 
-            pathfinder.pathfinderactive = True
-            print('Pathfinderactive')
-            pathfinder.createpath()
-            pathfinder.purepursuit()
+            pathfinder.reachedwaypoint = False
+            while (pathfinder.reachwaypoint == False):
+                pathfinder.pathfinderactive = True
+                msg = Bool()
+                msg.data = pathfinder.pathfinderactive
+                self.pathfinderactive_publisher_.publish(msg)
+                print('Pathfinderactive')
+                pathfinder.createpath()
+                pathfinder.purepursuit()
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
