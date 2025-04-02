@@ -193,7 +193,6 @@ class Pathfinder(Node):
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
         self.map_origin = None
         self.waypoints = None
-        self.reachedwaypoint = False
 
 
 
@@ -222,6 +221,9 @@ class Pathfinder(Node):
         self.scan_subscription  # prevent unused variable warning
         self.laser_range = np.array([])
 
+        self.reacheddp = False
+        self.obstacle = False
+
     def odom_callback(self, msg):
         #self.get_logger().info('In odom_callback')
         orientation_quat =  msg.pose.pose.orientation
@@ -243,6 +245,7 @@ class Pathfinder(Node):
         if self.laser_range[lr2i] < stop_distance_from_obstacle:
             print('OBSTACLE DETECTED')
             self.obstacleavoidance()
+            self.obstacle = True
 
     def dp_callback(self, msg):
         print('dpcallback')
@@ -287,14 +290,13 @@ class Pathfinder(Node):
         self.grid_x = round((cur_pos.x - self.map_origin.x) / map_res) # x position of robot on map from /map topic
         self.grid_y = round(((cur_pos.y - self.map_origin.y) / map_res)) # y posiiton of robot on map from /map topic
         
-        # kill pathfinder if decision point reached
+        # set reacheddp and run killpathfinder if decision point reached
         if (self.decisionpoint is not None):
             y_dist_to_dp = np.abs(self.grid_y - self.decisionpoint[0])
             x_dist_to_dp = np.abs(self.grid_x - self.decisionpoint[1])
             if (y_dist_to_dp < stop_distance_from_dp) and (x_dist_to_dp < stop_distance_from_dp):
-                print(y_dist_to_dp)
-                print(x_dist_to_dp)
-                self.killpathfinder() # stops pathfinder      
+                print(f"Reached dp: {y_dist_to_dp}, {x_dist_to_dp}")
+                self.reacheddp = True    
 
         # update decision point if map origin changes
         if (self.decisionpoint is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
@@ -311,13 +313,13 @@ class Pathfinder(Node):
 
     def killpathfinder(self):
         self.waypoints = []
-        if (self.reachedwaypoint == True):
+        if self.reacheddp:
             print('killpathfinder')
-            self.pathfinderactive = False            
+            self.pathfinderactive = False
             msg = Bool()
             msg.data = self.pathfinderactive
             self.pathfinderactive_publisher_.publish(msg)
-        else:
+        else: 
             print('loading new path')
 
     def createpath(self):
@@ -338,6 +340,7 @@ class Pathfinder(Node):
         print(f"Waypoints: {self.waypoints}")
 
     def purepursuit(self):
+        self.reacheddp = False
         while len(self.waypoints) > 0 and self.pathfinderactive:
             rclpy.spin_once(self)
 
@@ -345,9 +348,9 @@ class Pathfinder(Node):
             print(f"Currentwaypoint: {currentwaypoint}")
 
             diff_y = currentwaypoint[0] - self.grid_y
-            print(diff_y)
+            #print(diff_y)
             diff_x = currentwaypoint[1] - self.grid_x
-            print(diff_x)
+            #print(diff_x)
             if diff_y != 0:
                 angle_in_radians = math.atan(abs(diff_x/diff_y)) # calculate special angle from robot to next waypoint
                 angle_in_degrees = math.degrees(angle_in_radians) #convert to degrees
@@ -378,16 +381,25 @@ class Pathfinder(Node):
             self.publisher_.publish(twist)
             print('moving forward')
 
-            while (not reachedwaypoint) and self.pathfinderactive:
+            reachedwaypoint = False
+            while not reachedwaypoint:
                 y_dist_to_wp = np.abs(self.grid_y - currentwaypoint[0])
                 x_dist_to_wp = np.abs(self.grid_x - currentwaypoint[1])
                 if (y_dist_to_wp < stop_distance_from_wp) and (x_dist_to_wp < stop_distance_from_wp):
-                    self.reachedwaypoint = True
+                    reachedwaypoint = True
                     twist = Twist()
                     twist.linear.x = 0.0
                     twist.angular.z = 0.0
                     self.publisher_.publish(twist)
                 rclpy.spin_once(self)
+                if self.obstacle is True:
+                    print('self.obstacle true')
+                    break
+            if self.obstacle is True:
+                print('self.obstalce true2')
+                break
+        if len(self.waypoints) == 0:
+            self.reacheddp = True
         self.killpathfinder()
 
     def rotatebot(self, rot_angle):
@@ -435,6 +447,8 @@ class Pathfinder(Node):
             # get the sign to see if we can stop
             c_dir_diff = np.sign(c_change.imag)
             #self.get_logger().info('c_change_dir: %f c_dir_diff: %f' % (c_change_dir, c_dir_diff))
+            if self.obstacle is True:
+                break
 
         self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         # set the rotation speed to 0
@@ -443,20 +457,19 @@ class Pathfinder(Node):
         self.publisher_.publish(twist)
 
     def obstacleavoidance(self):
-        # retreat from obstacle slightly
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
+        # time.sleep(1)
         twist.linear.x = -speedchange
         self.publisher_.publish(twist)
-        time.sleep(0.5)
+        time.sleep(1)
         twist.linear.x = 0.0
         self.publisher_.publish(twist)
-        # kill current pathfinder process
-        self.killpathfinder()
-        # purepursuit() will end with self.reachedwaypoint = False
-        # in main, new path will be created to the same deicison point and pure pursuit will follow
+
+        #still need to code the recovery actions
+        
 
 
 def main(args=None): 
@@ -467,18 +480,16 @@ def main(args=None):
     plt.show()
 
     while True:
-        # olddp = pathfinder.decisionpoint
         rclpy.spin_once(pathfinder)
         if (not pathfinder.pathfinderactive) and (pathfinder.decisionpoint is not None): 
-            pathfinder.reachedwaypoint = False
-            while (pathfinder.reachwaypoint == False):
+            pathfinder.reacheddp = False
+            while pathfinder.reacheddp is False:
                 pathfinder.pathfinderactive = True
-                msg = Bool()
-                msg.data = pathfinder.pathfinderactive
-                self.pathfinderactive_publisher_.publish(msg)
                 print('Pathfinderactive')
+                pathfinder.obstacle = False
                 pathfinder.createpath()
                 pathfinder.purepursuit()
+            
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically

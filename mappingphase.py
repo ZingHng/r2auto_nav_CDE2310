@@ -17,9 +17,9 @@ from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Point
 
 # constants
-occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
-minimum_frontier_length = 8
-do_not_cross_line = 2
+occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-60: empty cells, 51-100: wall cells
+minimum_frontier_length = 5
+do_not_cross_line = 4
 
 class Frontier(Node):
 
@@ -122,8 +122,8 @@ class Frontier(Node):
                 self.makingdecision = True
         '''
 
-        print(f"self.grid_y: {self.grid_y}")
-        print(f"self.grid_x: {self.grid_x}")
+        #print(f"self.grid_y: {self.grid_y}")
+        #print(f"self.grid_x: {self.grid_x}")
         print(f"self.decisionpoint: {self.decisionpoint}")
 
     def frontiersearch(self):        
