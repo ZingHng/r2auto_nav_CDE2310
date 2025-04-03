@@ -53,6 +53,7 @@ class RollPitchYaw(Node):
         while(c_change_dir * c_dir_diff > 0):
             rclpy.spin_once(self)
             current_yaw = self.yaw
+            print(f"target_yaw={target_yaw}, current_yaw={current_yaw}")
             c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
             c_change = c_target_yaw / c_yaw
             c_dir_diff = np.sign(c_change.imag)
