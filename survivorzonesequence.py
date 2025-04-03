@@ -50,6 +50,9 @@ class SurvivorZoneSequence(Node):
         self.laser_range = np.array([])
         self.activations = []
         self.tfBuffer = tf2_ros.Buffer()
+        self.roll = 0
+        self.pitch = 0
+        self.yaw = 0
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
