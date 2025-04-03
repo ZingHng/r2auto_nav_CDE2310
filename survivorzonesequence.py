@@ -109,7 +109,7 @@ class SurvivorZoneSequence(Node):
             trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info('No transformation found')
-            return    
+            return (0,0)
         return trans.transform.translation # real world coordinates of robot relative to robot start point
     
     def looper(self):
