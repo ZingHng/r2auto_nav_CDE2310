@@ -16,25 +16,14 @@ import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry, OccupancyGrid
 
-def euler_from_quaternion(x, y, z, w):
-    t0 = +2.0 * (w * x + y * z)
-    t1 = +1.0 - 2.0 * (x * x + y * y)
-    roll_x = math.atan2(t0, t1)
+from helper_funcs import euler_from_quaternion
 
-    t2 = +2.0 * (w * y - z * x)
-    t2 = +1.0 if t2 > +1.0 else t2
-    t2 = -1.0 if t2 < -1.0 else t2
-    pitch_y = math.asin(t2)
-
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    yaw_z = math.atan2(t3, t4)
-
-    return roll_x, pitch_y, yaw_z # in radians
+ROTATECHANGE = 0.1
 
 class RollPitchYaw(Node):
     def __init__(self):
         super().__init__('RollPitchYaw')
+        self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
         self.odom_subscription = self.create_subscription(
             Odometry,
             'odom',
@@ -49,10 +38,39 @@ class RollPitchYaw(Node):
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
         print(f"roll={self.roll}, pitch{self.pitch}, yaw={self.yaw}")
 
+    def rotatebot(self, rot_angle):
+        twist = Twist()
+        current_yaw = self.yaw
+        c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
+        target_yaw = current_yaw + math.radians(rot_angle)
+        c_target_yaw = complex(math.cos(target_yaw),math.sin(target_yaw))
+        c_change = c_target_yaw / c_yaw
+        c_change_dir = np.sign(c_change.imag)
+        twist.linear.x = 0.0
+        twist.angular.z = c_change_dir * ROTATECHANGE
+        self.publisher_.publish(twist)
+        c_dir_diff = c_change_dir
+        while(c_change_dir * c_dir_diff > 0):
+            rclpy.spin_once(self)
+            current_yaw = self.yaw
+            print(f"target_yaw={target_yaw}, current_yaw={current_yaw}")
+            c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
+            c_change = c_target_yaw / c_yaw
+            c_dir_diff = np.sign(c_change.imag)
+        self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
+        twist.angular.z = 0.0
+        self.publisher_.publish(twist)
+    def looper(self):
+        while rclpy.ok():
+            angle = input()
+            self.rotatebot(self, angle)
+            time.sleep(3)
+        
+
 def main(args=None):
     rclpy.init(args=args)
     node_name = RollPitchYaw()
-    rclpy.spin(node_name)
+    node_name.looper()
     node_name.destroy_node()
     rclpy.shutdown()
 
