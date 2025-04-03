@@ -14,7 +14,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import Odometry, OccupancyGrid
 
 import tf2_ros
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
@@ -40,19 +40,23 @@ class SurvivorZoneSequence(Node):
         super().__init__('Survivor_Zone_Sequence')
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
         self.survivor_publisher = self.create_publisher(String, 'survivor', 10)
+        self.survivor_sequence = False
         self.scan_subscription = self.create_subscription(
             LaserScan,
             'scan',
             self.scan_callback,
             qos_profile_sensor_data)
-        self.survivor_sequence = False
-        self.temp_grid = None
         self.laser_range = np.array([])
-        self.activations = []
-        self.tfBuffer = tf2_ros.Buffer()
+        self.odom_subscription = self.create_subscription(
+            Odometry,
+            'odom',
+            self.odom_callback,
+            10)
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
+        self.activations = []
+        self.tfBuffer = tf2_ros.Buffer()
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
@@ -79,7 +83,6 @@ class SurvivorZoneSequence(Node):
         while(c_change_dir * c_dir_diff > 0):
             rclpy.spin_once(self)
             current_yaw = self.yaw
-            print(f"target_yaw={target_yaw}, current_yaw={current_yaw}")
             c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
             c_change = c_target_yaw / c_yaw
             c_dir_diff = np.sign(c_change.imag)
