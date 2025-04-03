@@ -1,6 +1,6 @@
 # this node subscribes to /map topic and decides the subsequent decision point whenever robot reaches a decision point
-# this node publishes the subsequent decision point for the pathfinder node to create path and execute pure pursuit to the subsequent decision point
-# this node will also publish when mapping phase is done so that the searching phase node can become active
+# this node publishes the subsequent decision point to /decisionpoint topic for the pathfinder node to create path and execute pure pursuit to the subsequent decision point
+# this node will also publish if mapping phase is active to /mappingphaseactive so that the searching phase node will know when to become active
 
 import rclpy
 from rclpy.node import Node
@@ -102,8 +102,8 @@ class Frontier(Node):
             self.odata[int(self.decisionpoint[0]), int(self.decisionpoint[1])] = 0 # set decision point location to 0 to see on the matplotlib
         img = Image.fromarray(self.odata) # create image from 2D array using PIL
 
-        # show the image using grayscale map
-        plt.imshow(img, cmap='gray', origin='lower')
+        # show the image using gradient map
+        plt.imshow(img, cmap='magma', origin='lower')
         plt.draw_all()
         # pause to make sure the plot gets created
         plt.pause(0.00000000001)

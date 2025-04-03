@@ -1,3 +1,9 @@
+# this node subscribes to /descisionpoint, /map and /odom topic and tries to navigate to decisionpoint
+# it creates an optimal path by overlaying an A* cost map on a wall proximity cost map and finding the path with the lowest total cost
+# waypoints are created based on the optimal path and the bot tries to move from waypoint to waypoint
+# this node also subscribes to /scan topic and initiates obstacle avoidance if lidar detects an obstacle
+# targetlock True means the algorithm will keep forcing it's way to decisionpoint even after it detects and avoids obstacles
+# targetlock False means the algorithm will move on to new decisionpoint after it detects and avoids obstacles
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -24,8 +30,8 @@ import time
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 stop_distance_from_dp = 8 # distance from decision point to stop pathfinder
 stop_distance_from_wp = 4 # distance from waypoint to change to next waypoint
-stop_distance_from_obstacle = 0.18 # distance to killpathfinder 0.18 is the best
-waypoint_gap = 4 # number of grids between pure pursuit waypoints
+stop_distance_from_obstacle = 0.25 # distance to killpathfinder 0.18 is the best for just turtlebot only
+waypoint_gap = 5 # number of grids between pure pursuit waypoints
 rotatechange = 0.2 # speed of rotation
 speedchange = 0.1 # speed of linear movement
 targetlock = False # whether the algorithm forces it's way to a certain decisionpoint or moves to next decisionpoint in the case of obstacles
@@ -155,18 +161,11 @@ class AStar:
     def print(self):
         pathmap = self.grid
         pathmap[self.start[0]][self.start[1]] = 0
-        '''
-        for (y, x) in self.path:
-            pathmap[y][x] = 0
-        '''
         # printing self.grid vs self.overall_costmap
         for (y, x) in self.path:
             pathmap[y, x] = 0
-         
-
         img = Image.fromarray(pathmap) # create image from 2D array using PIL
-
-        # show the image using grayscale map
+        # show the image using gradient map
         plt.imshow(img, cmap='magma', origin='lower')
         plt.draw_all()
         # pause to make sure the plot gets created
@@ -200,7 +199,8 @@ class Pathfinder(Node):
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
         self.grid_x = None # x position of robot on map from /map topic
         self.grid_y = None # y position of robot on map from /map topic
-        self.odata = np.array([]) # store the 2D aaray of map from /map topic 
+        self.odata = np.array([]) # store the 2D aaray of map from /map topic
+        self.reacheddp = False
         
         # create subscription to track orientation
         self.odom_subscription = self.create_subscription(
@@ -223,6 +223,7 @@ class Pathfinder(Node):
         self.scan_subscription  # prevent unused variable warning
         self.laser_range = np.array([])
         self.obstacle_angle = 0
+        self.obstacle = False
 
         # create pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
@@ -231,13 +232,12 @@ class Pathfinder(Node):
 
         # create cmd_vel publisher for moving TurtleBot
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
+                
         
-        # miscellaneous variables
-        self.reacheddp = False
-        self.obstacle = False
 
+    # to read decisionpoints
     def dp_callback(self, msg):
-        print('dpcallback')
+        print('NEW DECISION POINT')
         self.decisionpoint = (msg.y, msg.x)       
 
     def occ_callback(self, msg):
@@ -292,8 +292,8 @@ class Pathfinder(Node):
         orientation_quat =  msg.pose.pose.orientation
         # updates robot roll, pitch and yaw
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
-        
 
+    # mainly to check for obstacles and initiate obstacle avoidance    
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges) # create numpy array of laser scans
         self.laser_range[self.laser_range==0] = np.nan # replace 0's with nan
@@ -309,12 +309,8 @@ class Pathfinder(Node):
                 rot_angle -= 360
             print(f"Obstacle Angle: {rot_angle}")
             self.obstacle_angle = rot_angle
-            twist = Twist()
-            twist.linear.x = 0.0
-            twist.angular.z = 0.0
-            self.publisher_.publish(twist)
             self.obstacle = True
-
+            
     # creates path and then reduce path to waypoints
     def createpath(self):
         start = (self.grid_y, self.grid_x)
@@ -330,14 +326,13 @@ class Pathfinder(Node):
                 self.waypoints.append((y, x))
                 counter = 0
             counter += 1
-        self.waypoints.pop()
+        self.waypoints.pop() # remove last waypoint so robot does not go too near wall if last way point is wall
         print(f"Waypoints: {self.waypoints}")
 
     # rotate towards next waypoint and move straight until waypoint reached
     # repeat until no more waypoints left or within dp range
     # may break out of while loop if obstacle detected 
     def purepursuit(self):
-        self.reacheddp = False
         while len(self.waypoints) > 0 and self.pathfinderactive:
             rclpy.spin_once(self)
             currentwaypoint = self.waypoints.pop(0) # pop the next waypoint off list
@@ -367,7 +362,7 @@ class Pathfinder(Node):
 
             # rotate to that direction
             print(f"Desired Angle Inputted: {final_angle_in_degrees}")
-            self.rotatebot(float(final_angle_in_degrees))
+            self.rotatebot(float(final_angle_in_degrees), False)
 
             # move robot forward after rotating to correct angle
             twist = Twist()
@@ -404,7 +399,7 @@ class Pathfinder(Node):
         self.killpathfinder()
 
     # rotates robot towards input angle
-    def rotatebot(self, rot_angle):
+    def rotatebot(self, rot_angle, obstacleavoidance):
         twist = Twist()
         current_yaw = self.yaw # get current yaw angle
         self.get_logger().info('Current: %f' % math.degrees(current_yaw))
@@ -429,10 +424,10 @@ class Pathfinder(Node):
             c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw)) # convert the current yaw to complex form
             c_change = c_target_yaw / c_yaw # get difference in angle between current and target
             c_dir_diff = np.sign(c_change.imag) # get the sign to see if we can stop
-            # stop rotatebot if obstacle detected
-            if self.obstacle is True:
+            # stop rotatebot if obstacle detected, unless rotatebot was called from obstacleavoidance
+            if self.obstacle is True and not obstacleavoidance:
                 break
-
+            
         # stop rotation
         self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         twist.angular.z = 0.0
@@ -444,12 +439,14 @@ class Pathfinder(Node):
         # targetlock mode
         if targetlock is True:
             self.waypoints = []
+            # reacheddp is True when either within dp distance or no more waypoints
             if self.reacheddp:
                 print('killpathfinder')
                 self.pathfinderactive = False
                 msg = Bool()
                 msg.data = self.pathfinderactive
                 self.pathfinderactive_publisher_.publish(msg)
+                self.reacheddp = False # reset reacheddp since exiting pathfinder
             else: 
                 print('recalibrating path')
         # non targetlock mode    
@@ -460,18 +457,21 @@ class Pathfinder(Node):
             msg = Bool()
             msg.data = self.pathfinderactive
             self.pathfinderactive_publisher_.publish(msg)
+            self.reacheddp = False # reset reacheddp since exiting pathfinder
 
     # stop the robot immediately, rotate robot towards closest point and reverse away slightly
     def obstacleavoidance(self):
+        print('obstacle avoidance')
+        twist = Twist()
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
         self.obstacle = False # so that it rotate bot won't cut while trying to rotate during obstacle avoidance sequence
-        self.rotatebot(float(self.obstacle_angle)) # rotate towards direction of closest point
+        self.rotatebot(float(self.obstacle_angle), True) # rotate towards direction of closest point
         twist.linear.x = -speedchange # reverse away from closest point slightly
         self.publisher_.publish(twist)
-        time.sleep(1.5) # best timing is 0.8
+        time.sleep(0.5) # best timing is 1ish
         twist.linear.x = 0.0 # stop robot
         self.publisher_.publish(twist)
 
@@ -488,12 +488,11 @@ def main(args=None):
         rclpy.spin_once(pathfinder)
         if (not pathfinder.pathfinderactive) and (pathfinder.decisionpoint is not None): 
             pathfinder.pathfinderactive = True
-            pathfinder.reacheddp = False
             while pathfinder.pathfinderactive is True:
                 print('Pathfinderactive')
                 pathfinder.createpath()
                 pathfinder.purepursuit()
-          
+    
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
