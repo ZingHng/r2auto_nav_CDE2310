@@ -24,11 +24,11 @@ import time
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 stop_distance_from_dp = 8 # distance from decision point to stop pathfinder
 stop_distance_from_wp = 4 # distance from waypoint to change to next waypoint
-stop_distance_from_obstacle = 0.45 # distance to killpathfinder 0.18 is the best
+stop_distance_from_obstacle = 0.18 # distance to killpathfinder 0.18 is the best
 waypoint_gap = 4 # number of grids between pure pursuit waypoints
 rotatechange = 0.2 # speed of rotation
 speedchange = 0.1 # speed of linear movement
-targetlock = True # whether the algorithm forces it's way to a certain decisionpoint or moves to next decisionpoint in the case of obstacles
+targetlock = False # whether the algorithm forces it's way to a certain decisionpoint or moves to next decisionpoint in the case of obstacles
 
 
 
