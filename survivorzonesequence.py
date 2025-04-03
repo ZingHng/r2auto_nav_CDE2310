@@ -61,6 +61,7 @@ class SurvivorZoneSequence(Node):
     def odom_callback(self, msg):
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
+        print(f"roll={self.roll}, pitch{self.pitch}, yaw={self.yaw}")
 
     
     def rotatebot(self, rot_angle):
