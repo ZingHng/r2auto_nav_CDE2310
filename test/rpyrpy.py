@@ -60,10 +60,11 @@ class RollPitchYaw(Node):
         self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
+
     def looper(self):
         while rclpy.ok():
-            angle = input()
-            self.rotatebot(self, angle)
+            angle = input("Input: Angle")
+            self.rotatebot(angle)
             time.sleep(3)
         
 
