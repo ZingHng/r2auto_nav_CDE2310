@@ -19,7 +19,7 @@ from nav_msgs.msg import OccupancyGrid
 import tf2_ros
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 
-from firing import fire_sequence
+from helper_funcs import fire_sequence, euler_from_quaternion
 
 DELTASPEED = 0.05
 MAXTEMP = 32.0
@@ -57,6 +57,11 @@ class SurvivorZoneSequence(Node):
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
         self.laser_range[self.laser_range==0] = np.nan
+
+    def odom_callback(self, msg):
+        orientation_quat =  msg.pose.pose.orientation
+        self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
+
     
     def rotatebot(self, rot_angle):
         twist = Twist()
@@ -68,6 +73,7 @@ class SurvivorZoneSequence(Node):
         c_change_dir = np.sign(c_change.imag)
         twist.linear.x = 0.0
         twist.angular.z = c_change_dir * ROTATECHANGE
+        print(f"target_yaw {target_yaw}, ")
         self.publisher_.publish(twist)
         c_dir_diff = c_change_dir
         while(c_change_dir * c_dir_diff > 0):
@@ -141,11 +147,6 @@ class SurvivorZoneSequence(Node):
                     self.survivor_publisher.publish(survivor_msg)
                     self.activations.append(self.current_position())
                     self.rotatebot(180)
-                    twist = Twist()
-                    twist.linear.x = 0.0
-                    twist.angular.z = 0.0
-                    self.publisher_.publish(twist)
-                    print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
 
             rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             self.get_logger().info(f"LOOP{counter} DONE")

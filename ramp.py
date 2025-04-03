@@ -16,7 +16,7 @@ import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry, OccupancyGrid
 
-from firing import fire_sequence
+from helper_funcs import fire_sequence
 
 DELTASPEED = 0.05
 MAXTEMP = 32.0
