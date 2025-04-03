@@ -119,7 +119,7 @@ class SurvivorZoneSequence(Node):
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
                 x, y = self.current_position()
-                nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations])
+                nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
                     survivor_msg = String()
                     survivor_msg.data = "FOUND"
