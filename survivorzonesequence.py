@@ -122,6 +122,7 @@ class SurvivorZoneSequence(Node):
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
                 x, y = self.current_position()
+                print(f"current{x, y}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
                     survivor_msg = String()
@@ -140,6 +141,11 @@ class SurvivorZoneSequence(Node):
                     self.survivor_publisher.publish(survivor_msg)
                     self.activations.append(self.current_position())
                     self.rotatebot(180)
+                    twist = Twist()
+                    twist.linear.x = 0.0
+                    twist.angular.z = 0.0
+                    self.publisher_.publish(twist)
+                    print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
 
             rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             self.get_logger().info(f"LOOP{counter} DONE")
