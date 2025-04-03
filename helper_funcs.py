@@ -26,7 +26,6 @@ def fire_sequence():
     in1 = 20
     in2 = 16
     en = 21
-    mospwm = 12
 
     #Stepper setup
     control_pins = [26,19,13,6]
@@ -46,11 +45,8 @@ def fire_sequence():
     GPIO.setup(en,GPIO.OUT)
     GPIO.output(in1,GPIO.LOW)
     GPIO.output(in2,GPIO.LOW)
-    GPIO.setup(mospwm,GPIO.OUT)
     p=GPIO.PWM(en,1000)
     p.start(25)
-    ps = GPIO.PWM(mospwm, 1000)
-    ps.start(0)
 
     def FlywheelStart():
         GPIO.setmode(GPIO.BCM)
@@ -76,10 +72,9 @@ def fire_sequence():
                     GPIO.output(control_pins[pin], fullstep_seq[fullstep][pin])
                 time.sleep(0.001)
     
-    ps.ChangeDutyCycle(75)
     print("Flywheel Start")
     FlywheelStart()
-    time.sleep(2)
+    time.sleep(5)
     print("Stepper Turn")
     StepperTurn()
     time.sleep(4)
@@ -91,7 +86,6 @@ def fire_sequence():
     time.sleep(5)
     print("Flywheel Stop")
     FlywheelStop()
-    ps.ChangeDutyCycle(0)
     print("Rest")
     time.sleep(3)
     GPIO.cleanup()

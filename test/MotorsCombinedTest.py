@@ -8,7 +8,7 @@ in2 = 16
 # in3 = 16
 # in4 = 20
 en = 21
-mospwm = 12
+#mospwm = 12
 
 #Stepper setup
 control_pins = [26,19,13,6]
@@ -21,13 +21,13 @@ fullstep_seq = [
     [1,1,0,0],
     [0,1,1,0],
     [0,0,1,1],
-    [1,0,0,1]] # reversed
+    [1,0,0,1]]
 
 '''fullstep_seq = [
     [1,0,0,1],
     [0,0,1,1],
     [0,1,1,0],
-    [1,1,0,0]]'''
+    [1,1,0,0]]''' # reversed
 
 RUNNING = True
 STEPSPERREV = 512
@@ -38,7 +38,7 @@ GPIO.setup(in2,GPIO.OUT)
 GPIO.setup(en,GPIO.OUT)
 GPIO.output(in1,GPIO.LOW)
 GPIO.output(in2,GPIO.LOW)
-GPIO.setup(mospwm,GPIO.OUT)
+#GPIO.setup(mospwm,GPIO.OUT)
 p=GPIO.PWM(en,1000)
 p.start(25)
 #ps = GPIO.PWM(mospwm, 1000)
@@ -75,7 +75,7 @@ while True:
         #ps.ChangeDutyCycle(75)
         time.sleep(2)
         FlywheelStart()
-        time.sleep(2)
+        time.sleep(5)
         StepperTurn()
         time.sleep(4)
         StepperTurn()
