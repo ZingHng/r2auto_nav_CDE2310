@@ -99,7 +99,7 @@ class SurvivorZoneSequence(Node):
         twist.angular.z = 0.0
         if self.laser_range.size != 0:
             laser_points = len(self.laser_range)
-            within_viewing_angle = VIEWANGLE/360 * laser_points
+            within_viewing_angle = math.ceil(VIEWANGLE/360 * laser_points)
             self.laser_range[:laser_points - within_viewing_angle][within_viewing_angle:] = np.nan
             lidar_shortest = np.nanmin(self.laser_range)
         else:
