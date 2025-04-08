@@ -25,7 +25,7 @@ def fire_sequence():
 
     in1 = 20
     in2 = 16
-    en = 21
+    en = 12
 
     #Stepper setup
     control_pins = [26,19,13,6]
@@ -47,7 +47,7 @@ def fire_sequence():
     GPIO.output(in1,GPIO.LOW)
     GPIO.output(in2,GPIO.LOW)
     p=GPIO.PWM(en,1000)
-    p.start(15)
+    p.start(25)
 
     def FlywheelStart():
         GPIO.setmode(GPIO.BCM)
