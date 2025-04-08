@@ -21,12 +21,16 @@ import time
 
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
-stop_distance_from_obstacle = 0.25 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
-#stop_distance_from_obstacle_behind = 3 # distance from obstacle behind to activate obstacleavoidance. this is to account for launcher behind turtlebot
+#stop_distance_from_obstacle = 0.25 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
+stop_distance_from_obstacle_behind = 0.3 # distance from obstacle behind to activate obstacleavoidance. this is to check if it's ok to spin
 rotatechange = 0.3 # speed of rotation
+speedchange = 0.12 # speed of linear movement
 radius = 20 # los limit of heat sensor
 cone_angle = 15 # los limit of heat sensor
 minimum_cost = 150 # minimum cost required for circle on costmap to be selected for next decisionpoint so that some obscure corner would not be selected
+searchingresolution = 10 # to speed up the searching of cells by searchingresolution^2
+do_not_cross_line = 5 # about 3/-3? depends on direction
+
 
 
 def euler_from_quaternion(x, y, z, w):
@@ -103,7 +107,7 @@ def increment_los_in_angle_range(odata, y, x, input_angle, radius, cone_angle):
                         # Check if the angle is within the cone (input_angle ± 10 degrees)
                         if min_angle <= angle <= max_angle:
                             if is_clear_line_of_sight(odata, y, x, ny, nx):
-                                odata[ny][nx] += 1  # Set the value to 2 to mark it as "seen"
+                                odata[ny][nx] += 5  # increment to denote how many times sensor has seen it
                                 
 
 
@@ -214,7 +218,6 @@ class Searchingphase(Node):
         self.old_yaw = 0
         self.yaw_changed = False
 
-        '''
         # create subscription to track lidar
         self.scan_subscription = self.create_subscription(
             LaserScan,
@@ -225,7 +228,6 @@ class Searchingphase(Node):
         self.laser_range = np.array([])
         self.obstacle_angle = 0
         self.obstacle = False
-        '''
 
         # create pathfinderactive subscription, send new decisionpoint when pathfinderactive is false
         self.pathfinderactive_subscription = self.create_subscription(
@@ -234,7 +236,7 @@ class Searchingphase(Node):
             self.pathfinderactive_callback,
             10)
         self.pathfinderactive_subscription
-        self.makingdecision = False # whether robot is at decision point 
+        self.makingdecision = False # whether robot is at decision point DEFAULT IS FALSE
 
         # create mappingphaseactive subscription to check if can proceed with mappingphase
         self.mappingphaseactive_subscription = self.create_subscription(
@@ -272,6 +274,7 @@ class Searchingphase(Node):
         # binnum go from 1 to 3 so we can use uint8
         # convert into 2D array using column order
         self.odata = np.uint8(binnum.reshape(msg.info.height,msg.info.width))
+
         # change odata such that it only cares about empty spaces
         self.odata[self.odata == 1] = 0
         self.odata[self.odata == 2] = 1
@@ -311,6 +314,17 @@ class Searchingphase(Node):
             self.costmap = transform_costmap_back(self.costmap, shift_x, shift_y)
             print('Transformed costmap 2')
         
+        # draw do not cross line as wall so that robot does not see ramp as frontier
+        if msg.info.height > round(do_not_cross_line / map_res):
+            if do_not_cross_line < 0:
+                start_row = abs(round(do_not_cross_line / map_res))
+                for row in range(0, msg.info.height - start_row):
+                    self.odata[row] = [3] * msg.info.width
+            if do_not_cross_line > 0:
+                start_row = round(do_not_cross_line / map_res)
+                for row in range(start_row, msg.info.height):
+                    self.odata[row] = [3] * msg.info.width
+
         # Update the costmap to include new empty grids
         if (len(self.odata[0]) == len(self.costmap[0])) and (len(self.odata) == len(self.costmap)):
             self.costmap[(self.odata == 1) & (self.costmap == 0)] = 1
@@ -335,15 +349,13 @@ class Searchingphase(Node):
             self.yaw_changed = True
             self.old_yaw = self.yaw
             
-
-    '''
-    # mainly to check for obstacles and initiate obstacle avoidance    
+    # mainly to check for obstacles and initiate obstacle avoidance before spinning
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges) # create numpy array of laser scans
         self.laser_range[self.laser_range==0] = np.nan # replace 0's with nan
         lr2i = np.nanargmin(self.laser_range)        
         # if closest point is less than stop distance, initiate obstacle avoidance sequence and set obstacle to true to break while loops in purepursuit/rotatebot
-        if self.laser_range[lr2i] < stop_distance_from_obstacle:
+        if self.laser_range[lr2i] < stop_distance_from_obstacle_behind:
             print('OBSTACLE DETECTED')
             # convert lr2i to real world angle
             rot_angle = lr2i + math.degrees(self.yaw)
@@ -354,7 +366,8 @@ class Searchingphase(Node):
             print(f"Obstacle Angle: {rot_angle}")
             self.obstacle_angle = rot_angle
             self.obstacle = True
-    '''
+        else:
+            self.obstacle = False
     
     def mappingphaseactive_callback(self, msg):
         self.mappingphaseactive = msg.data
@@ -375,7 +388,7 @@ class Searchingphase(Node):
 
     def fullrotation(self):
         # rotate the bot 360
-        print('fullrotation')
+        print('360 rotation')
         yaw = self.yaw
         twist = Twist()
         twist.linear.x = 0.0 # set linear speed to zero so the TurtleBot rotates on the spot
@@ -383,16 +396,20 @@ class Searchingphase(Node):
         self.publisher_.publish(twist) # start rotation
         time.sleep(2)
         rclpy.spin_once(self)
+        start_time = time.time()
         while True:
             rclpy.spin_once(self)
-            if 0 < math.degrees(abs(self.yaw-yaw)) < 10:
+            if 0 < math.degrees(abs(self.yaw-yaw)) < 15:
              break
             if self.szsactive:
+                break
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= 20:
                 break
         twist.linear.x = 0.0 
         twist.angular.z = 0.0
         self.publisher_.publish(twist) # stop rotation
-        print('finishedrotation')                          
+        print('finished rotation')                          
 
 
     def decisionpointselect(self):
@@ -455,12 +472,12 @@ class Searchingphase(Node):
             best_location = None
             best_cost = float('inf')
             
-            for y in range(costmap.shape[0]):
-                for x in range(costmap.shape[1]):
+
+            for y in range(0, costmap.shape[0], searchingresolution):  # Step by searchingresolution in the y-direction
+                for x in range(0, costmap.shape[1], searchingresolution):  # Step by searchingresolution in the x-direction
                     # Skip checking if the point is an obstacle
                     if costmap[y, x] == 0:
                         continue
-
                     # Calculate the cost of the circle around this point
                     total_cost = get_cost_of_circle(y, x, radius, costmap)
 
@@ -484,7 +501,59 @@ class Searchingphase(Node):
             point.x = float(round(self.decisionpoint[1]))
             self.dp_publisher_.publish(point) # publish new dp for pathplanner
 
+        # stop the robot immediately, rotate robot towards closest point and reverse away slightly
+    def obstacleavoidance(self):
+        print('obstacle avoidance')
+        twist = Twist()
+        twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = 0.0
+        self.publisher_.publish(twist)
+        self.rotatebot(float(self.obstacle_angle)) # rotate to face/backface direction of closest point
+        while True:
+            twist.linear.x = -speedchange # reverse away from closest point slightly
+            self.publisher_.publish(twist)
+            time.sleep(0.3) # best timing is 1ish
+            twist.linear.x = 0.0 # stop robot
+            self.publisher_.publish(twist)
+            print('reversing from obstacle')
+            rclpy.spin_once(self)
+            if not self.obstacle or self.szsactive:
+                break
+    
+    def rotatebot(self, rot_angle):
+        twist = Twist()
+        current_yaw = self.yaw # get current yaw angle
+        self.get_logger().info('Current: %f' % math.degrees(current_yaw))
+        # we are going to use complex numbers to avoid problems when the angles go from
+        # 360 to 0, or from -180 to 180
+        c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))        
+        c_target_yaw = complex(math.cos(math.radians(rot_angle)),math.sin(math.radians(rot_angle))) # convert to complex notation
+        self.get_logger().info('Desired: %f' % math.degrees(cmath.phase(c_target_yaw)))
+        c_change = c_target_yaw / c_yaw # divide the two complex numbers to get the change in direction
+        c_change_dir = np.sign(c_change.imag) # get the sign of the imaginary component to figure out which way we have to turn
+        twist.linear.x = 0.0 # set linear speed to zero so the TurtleBot rotates on the spot
+        twist.angular.z = c_change_dir * rotatechange # set the direction to rotate
+        self.publisher_.publish(twist) # start rotation
 
+        # we will use the c_dir_diff variable to see if we can stop rotating
+        # if the rotation direction was 1.0, then we will want to stop when the c_dir_diff
+        # becomes -1.0, and vice versa
+        c_dir_diff = c_change_dir
+        while(c_change_dir * c_dir_diff > 0):
+            rclpy.spin_once(self) # allow the callback functions to run
+            current_yaw = self.yaw     
+            c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw)) # convert the current yaw to complex form
+            c_change = c_target_yaw / c_yaw # get difference in angle between current and target
+            c_dir_diff = np.sign(c_change.imag) # get the sign to see if we can stop
+            # stop rotatebot if obstacle detected, unless rotatebot was called from obstacleavoidance
+            if self.szsactive:
+                break
+            
+        # stop rotation
+        self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
+        twist.angular.z = 0.0
+        self.publisher_.publish(twist)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -497,6 +566,8 @@ def main(args=None):
     while True:
         rclpy.spin_once(searchingphase)
         if (searchingphase.makingdecision):
+            if searchingphase.obstacle == True:
+                searchingphase.obstacleavoidance()
             searchingphase.fullrotation()
             if not searchingphase.szsactive:
                 searchingphase.decisionpointselect()            

@@ -20,7 +20,7 @@ import time
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 minimum_frontier_length = 5
-do_not_cross_line = 4
+do_not_cross_line = 5 # about 3/-3? depends on direction
 
 class Frontier(Node):
 
@@ -106,12 +106,18 @@ class Frontier(Node):
         # update dp based on new map
         if (self.decisionpoint is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
             self.decisionpoint = (round(self.decisionpoint[0] + (old_map_origin.y - self.map_origin.y) / map_res), round(self.decisionpoint[1] + (old_map_origin.x - self.map_origin.x) / map_res))
+            print(f"transformed self.decisionpoint: {self.decisionpoint}")
 
         # draw do not cross line as wall so that robot does not see ramp as frontier
         if msg.info.height > round(do_not_cross_line / map_res):
-            start_row = round(do_not_cross_line / map_res)
-            for row in range(start_row, msg.info.height):
-                self.odata[row] = [3] * msg.info.width
+            if do_not_cross_line < 0:
+                start_row = abs(round(do_not_cross_line / map_res))
+                for row in range(0, msg.info.height - start_row):
+                    self.odata[row] = [3] * msg.info.width
+            if do_not_cross_line > 0:
+                start_row = round(do_not_cross_line / map_res)
+                for row in range(start_row, msg.info.height):
+                    self.odata[row] = [3] * msg.info.width
 
         self.odata[self.grid_y][self.grid_x] = 0 # set current robot location to 0 to see on the matplotlib
         if (self.decisionpoint is not None):
@@ -126,7 +132,7 @@ class Frontier(Node):
 
         #print(f"self.grid_y: {self.grid_y}")
         #print(f"self.grid_x: {self.grid_x}")
-        print(f"self.decisionpoint: {self.decisionpoint}")
+        #print(f"self.decisionpoint: {self.decisionpoint}")
 
     def szs_callback(self, msg):
         print('SURVIVOR ZONE SEQUENCE ACTIVE')
@@ -222,6 +228,7 @@ class Frontier(Node):
             point.y = float(round(self.decisionpoint[0]))
             point.x = float(round(self.decisionpoint[1]))
             self.dp_publisher_.publish(point) # publish new dp for pathplanner
+            print(f"self.decisionpoint: {self.decisionpoint}")
             
 
 
@@ -240,10 +247,10 @@ def main(args=None):
             frontier.frontierselect()
 
         # freeze pathfinder while szsactive
-        while pathfinder.szsactive:
-            rclpy.spin_once(pathfinder)
+        while frontier.szsactive:
+            rclpy.spin_once(frontier)
             print('stuck in szs')
-            
+
         if (not frontier.mappingphaseactive):
             break
 
