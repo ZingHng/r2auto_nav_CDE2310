@@ -152,6 +152,8 @@ class SurvivorZoneSequence(Node):
                     self.activations.append(self.current_position())
                     print(self.activations)
                     self.rotatebot(180)
+                    self.survivor_sequence = False
+
 
             rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             counter += 1
