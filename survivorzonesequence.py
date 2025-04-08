@@ -22,13 +22,17 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 from helper_funcs import fire_sequence, euler_from_quaternion
 
 DELTASPEED = 0.05
-MAXTEMP = 29.0
 ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
 FIRINGSAFETYZONESQ = 1
-VIEWANGLE = 90 # 0 +-ViewAngle
+VIEWANGLE = 45 # 0 +-ViewAngle
+
+try:
+    max_temp = float(input("Max Temp?"))
+except:
+    max_temp = 29.0
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -136,7 +140,7 @@ class SurvivorZoneSequence(Node):
         counter = 1
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
-            if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
+            if not self.survivor_sequence and np.max(pixels) > max_temp:
                 x, y = self.position
                 print(f"{counter} current{x, y}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
