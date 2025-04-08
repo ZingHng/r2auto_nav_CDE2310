@@ -28,6 +28,7 @@ SAFETYDISTANCE = 0.250
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
 FIRINGSAFETYZONESQ = 1
+VIEWANGLE = 90 # 0 +-ViewAngle
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -97,6 +98,9 @@ class SurvivorZoneSequence(Node):
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         if self.laser_range.size != 0:
+            laser_points = len(self.laser_range)
+            within_viewing_angle = math.ceil(VIEWANGLE/360 * laser_points)
+            self.laser_range[:laser_points - within_viewing_angle][within_viewing_angle:] = np.nan
             lidar_shortest = np.nanmin(self.laser_range)
         else:
             lidar_shortest = 0
