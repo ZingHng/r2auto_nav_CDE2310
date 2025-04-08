@@ -19,10 +19,10 @@ class SensorTest(Node):
     def looper(self):
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
-            pixels = np.reshape(pixels, 64)
+            pixels = np.reshape(pixels, (8,8))
             print(pixels)
             print("\n")
-            time.sleep(0.5)
+            time.sleep()
 
 def main(args=None):
     rclpy.init(args=args)
