@@ -47,7 +47,7 @@ def fire_sequence():
     GPIO.output(in1,GPIO.LOW)
     GPIO.output(in2,GPIO.LOW)
     p=GPIO.PWM(en,1000)
-    p.start(25)
+    p.start(30)
 
     def FlywheelStart():
         GPIO.setmode(GPIO.BCM)
@@ -88,7 +88,7 @@ def fire_sequence():
         print("Flywheel Stop")
         FlywheelStop()
         print("Rest")
-        time.sleep(3)
+        time.sleep(2)
     except:
         FlywheelStop()
     finally:
