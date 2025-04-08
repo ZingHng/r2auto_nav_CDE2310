@@ -7,7 +7,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from std_msgs.msg import String, Bool
+from std_msgs.msg import Bool
 from nav_msgs.msg import OccupancyGrid
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
@@ -30,10 +30,10 @@ import time
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 stop_distance_from_dp = 8 # distance from decision point to stop pathfinder
 stop_distance_from_wp = 4 # distance from waypoint to change to next waypoint
-stop_distance_from_obstacle = 0.25 # distance to killpathfinder 0.18 is the best for just turtlebot only
+stop_distance_from_obstacle = 0.18 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
 waypoint_gap = 5 # number of grids between pure pursuit waypoints
-rotatechange = 0.2 # speed of rotation
-speedchange = 0.1 # speed of linear movement
+rotatechange = 0.3 # speed of rotation
+speedchange = 0.12 # speed of linear movement
 targetlock = False # whether the algorithm forces it's way to a certain decisionpoint or moves to next decisionpoint in the case of obstacles
 
 
@@ -161,7 +161,6 @@ class AStar:
     def print(self):
         pathmap = self.grid
         pathmap[self.start[0]][self.start[1]] = 0
-        # printing self.grid vs self.overall_costmap
         for (y, x) in self.path:
             pathmap[y, x] = 0
         img = Image.fromarray(pathmap) # create image from 2D array using PIL
@@ -178,7 +177,6 @@ class Pathfinder(Node):
         super().__init__('pathfinder')
         
         # create subscription for any incoming new decision point
-        self.pathfinderactive = False
         self.dp_subscription = self.create_subscription(
             Point,
             'decisionpoint',
@@ -201,6 +199,7 @@ class Pathfinder(Node):
         self.grid_y = None # y position of robot on map from /map topic
         self.odata = np.array([]) # store the 2D aaray of map from /map topic
         self.reacheddp = False
+        self.map_origin = None # store map origin to facilitate transformation of coordinates
         
         # create subscription to track orientation
         self.odom_subscription = self.create_subscription(
@@ -227,18 +226,17 @@ class Pathfinder(Node):
 
         # create pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
-        self.map_origin = None
+        self.pathfinderactive = False
         self.waypoints = None
 
         # create cmd_vel publisher for moving TurtleBot
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
                 
-        
-
     # to read decisionpoints
     def dp_callback(self, msg):
         print('NEW DECISION POINT')
-        self.decisionpoint = (msg.y, msg.x)       
+        self.decisionpoint = (msg.y, msg.x)
+        print(self.decisionpoint)       
 
     def occ_callback(self, msg):
         occdata = np.array(msg.data) # create numpy array
@@ -379,18 +377,18 @@ class Pathfinder(Node):
                 x_dist_to_wp = np.abs(self.grid_x - currentwaypoint[1])
                 if (y_dist_to_wp < stop_distance_from_wp) and (x_dist_to_wp < stop_distance_from_wp):
                     reachedwaypoint = True
-                    twist = Twist()
-                    twist.linear.x = 0.0
-                    twist.angular.z = 0.0
-                    self.publisher_.publish(twist)
                 rclpy.spin_once(self)
             # if robot detects obstacle, exit pure pursuit
-                if self.obstacle is True:
-                    print('self.obstacle true1')
+                if self.obstacle is True or self.reacheddp:
+                    print('break 1')
                     break
-            if self.obstacle is True:
-                print('self.obstacle true2')
+            if self.obstacle is True or self.reacheddp:
+                print('break 2')
                 break
+        twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = 0.0
+        self.publisher_.publish(twist)
         if self.obstacle is True:
             self.obstacleavoidance()
 
@@ -436,6 +434,10 @@ class Pathfinder(Node):
     # targetlock mode: clears waypoints and sets pathfinderactive to false if reacheddp, else pathfinderactive still true, createpath and purepursuit towards same dp
     # non targetlock mode: clears waypoints and sets pathfinderactive to false 
     def killpathfinder(self):
+        twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = 0.0
+        self.publisher_.publish(twist)
         # targetlock mode
         if targetlock is True:
             self.waypoints = []
@@ -447,6 +449,7 @@ class Pathfinder(Node):
                 msg.data = self.pathfinderactive
                 self.pathfinderactive_publisher_.publish(msg)
                 self.reacheddp = False # reset reacheddp since exiting pathfinder
+                self.decisionpoint = None
             else: 
                 print('recalibrating path')
         # non targetlock mode    
@@ -458,6 +461,7 @@ class Pathfinder(Node):
             msg.data = self.pathfinderactive
             self.pathfinderactive_publisher_.publish(msg)
             self.reacheddp = False # reset reacheddp since exiting pathfinder
+            self.decisionpoint = None
 
     # stop the robot immediately, rotate robot towards closest point and reverse away slightly
     def obstacleavoidance(self):
@@ -488,10 +492,15 @@ def main(args=None):
         rclpy.spin_once(pathfinder)
         if (not pathfinder.pathfinderactive) and (pathfinder.decisionpoint is not None): 
             pathfinder.pathfinderactive = True
+            msg = Bool()
+            msg.data = pathfinder.pathfinderactive
+            pathfinder.pathfinderactive_publisher_.publish(msg)
             while pathfinder.pathfinderactive is True:
                 print('Pathfinderactive')
                 pathfinder.createpath()
                 pathfinder.purepursuit()
+                
+
     
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically

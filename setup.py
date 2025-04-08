@@ -29,6 +29,7 @@ setup(
             'e2r2scanner = auto_nav.e2r2scanner:main',
             'mappingphase = auto_nav.mappingphase:main',
             'pathfinder = auto_nav.pathfinder:main',
+            'searchingphase = auto_nav.searchingphase:main',
         ],
     },
 )
