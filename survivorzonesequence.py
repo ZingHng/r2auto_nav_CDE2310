@@ -22,7 +22,7 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 from helper_funcs import fire_sequence, euler_from_quaternion
 
 DELTASPEED = 0.05
-MAXTEMP = 32.0
+MAXTEMP = 29.0
 ROTATECHANGE = 0.1
 SAFETYDISTANCE = 0.250
 TIMERPERIOD = 0.1
