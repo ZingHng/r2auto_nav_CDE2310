@@ -24,7 +24,7 @@ from helper_funcs import fire_sequence, euler_from_quaternion
 DELTASPEED = 0.05
 MAXTEMP = 29.0
 ROTATECHANGE = 0.1
-SAFETYDISTANCE = 0.250
+SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
 FIRINGSAFETYZONESQ = 1
@@ -52,13 +52,19 @@ class SurvivorZoneSequence(Node):
             Odometry,
             'odom',
             self.odom_callback,
-            10) 
+            10)
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
         self.activations = []
+        self.occ_subscription = self.create_subscription(
+            OccupancyGrid,
+            'map',
+            self.occ_callback,
+            qos_profile_sensor_data)
         self.tfBuffer = tf2_ros.Buffer()
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
+        self.position = (0,0)
         self.temp_grid = None
 
     def scan_callback(self, msg):
@@ -68,6 +74,14 @@ class SurvivorZoneSequence(Node):
     def odom_callback(self, msg):
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
+
+    def occ_callback(self, msg):
+        try:
+            trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
+        except (LookupException, ConnectivityException, ExtrapolationException) as e:
+            self.get_logger().info('No transformation found')
+            return
+        self.position = trans.transform.translation # real world coordinates of robot relative to robot start point
     
     def rotatebot(self, rot_angle):
         twist = Twist()
@@ -117,21 +131,13 @@ class SurvivorZoneSequence(Node):
             return False
         return True
     
-    def current_position(self):
-        try:
-            trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
-        except (LookupException, ConnectivityException, ExtrapolationException) as e:
-            self.get_logger().info('No transformation found')
-            return (0,0)
-        return trans.transform.translation # real world coordinates of robot relative to robot start point
-    
     def looper(self):
         print("SurvivorZoneSequence")
         counter = 1
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > MAXTEMP:
-                x, y = self.current_position()
+                x, y = self.position
                 print(f"{counter} current{x, y}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
