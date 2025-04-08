@@ -58,6 +58,7 @@ class SurvivorZoneSequence(Node):
         self.yaw = 0
         self.activations = []
         self.tfBuffer = tf2_ros.Buffer()
+        self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
         self.temp_grid = None
 
     def scan_callback(self, msg):
@@ -80,14 +81,12 @@ class SurvivorZoneSequence(Node):
         twist.angular.z = c_change_dir * ROTATECHANGE
         self.publisher_.publish(twist)
         c_dir_diff = c_change_dir
-        print(f"{c_change_dir} c_dir_diff={c_dir_diff}")
         while(c_change_dir * c_dir_diff > 0):
             rclpy.spin_once(self)
             current_yaw = self.yaw
             c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
             c_change = c_target_yaw / c_yaw
             c_dir_diff = np.sign(c_change.imag)
-            print(f"c_dir_diff={c_dir_diff}, current_yaw={current_yaw}")
         self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
@@ -150,6 +149,7 @@ class SurvivorZoneSequence(Node):
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
                     self.activations.append(self.current_position())
+                    print(self.activations)
                     self.rotatebot(180)
 
             rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
