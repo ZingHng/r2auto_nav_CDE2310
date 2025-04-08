@@ -144,14 +144,13 @@ class SurvivorZoneSequence(Node):
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
-                stay_survivor_sequence = self.approach_victim(left_half, right_half)
-                if not stay_survivor_sequence:
-                    survivor_msg = Bool()
-                    survivor_msg.data = False
-                    self.survivor_publisher.publish(survivor_msg)
-                    self.activations.append(self.current_position())
-                    print(self.activations)
-                    self.rotatebot(180)
+                self.approach_victim(left_half, right_half)
+                survivor_msg = Bool()
+                survivor_msg.data = False
+                self.survivor_publisher.publish(survivor_msg)
+                self.activations.append(self.current_position())
+                print(self.activations)
+                self.rotatebot(180)
 
             rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             counter += 1
