@@ -126,6 +126,7 @@ class SurvivorZoneSequence(Node):
         return trans.transform.translation # real world coordinates of robot relative to robot start point
     
     def looper(self):
+        print("SurvivorZoneSequence")
         counter = 1
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
