@@ -53,6 +53,14 @@ class Frontier(Node):
         self.pathfinderactive_subscription
         self.makingdecision = True # whether robot is at decision point 
 
+        # create subscription to survivorzonesequence
+        self.szs_subscription = self.create_subscription(
+            Bool,
+            'survivorzonesequenceactive',
+            self.szs_callback,
+            10)
+        self.szsactive = False
+
         # create decisionpoint publisher to send pathfinder new decision points
         self.dp_publisher_ = self.create_publisher(Point, 'decisionpoint', 10) # publishes new decision point for pathfinder node
         self.decisionpoint = None # (y, x) coordinates of next decision point 
@@ -119,6 +127,10 @@ class Frontier(Node):
         #print(f"self.grid_y: {self.grid_y}")
         #print(f"self.grid_x: {self.grid_x}")
         print(f"self.decisionpoint: {self.decisionpoint}")
+
+    def szs_callback(self, msg):
+        print('SURVIVOR ZONE SEQUENCE ACTIVE')
+        self.szsactive = msg.data
 
     def frontiersearch(self):        
         # 8 directions of neighbours
@@ -226,6 +238,12 @@ def main(args=None):
         if (frontier.makingdecision) and (frontier.mappingphaseactive):
             frontier.frontiersearch()
             frontier.frontierselect()
+
+        # freeze pathfinder while szsactive
+        while pathfinder.szsactive:
+            rclpy.spin_once(pathfinder)
+            print('stuck in szs')
+            
         if (not frontier.mappingphaseactive):
             break
 

@@ -22,7 +22,7 @@ import time
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 stop_distance_from_obstacle = 0.25 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
-#stop_distance_from_obstacle_behind = 3 # distance from obstacle behind to activate obstacleavoidance. this is to account for launcher behind turtlebot.
+#stop_distance_from_obstacle_behind = 3 # distance from obstacle behind to activate obstacleavoidance. this is to account for launcher behind turtlebot
 rotatechange = 0.3 # speed of rotation
 radius = 20 # los limit of heat sensor
 cone_angle = 15 # los limit of heat sensor
@@ -245,6 +245,14 @@ class Searchingphase(Node):
         self.mappingphaseactive_subscription
         self.mappingphaseactive = True # DEFAULT IS TRUE
 
+        # create subscription to survivorzonesequence
+        self.szs_subscription = self.create_subscription(
+            Bool,
+            'survivorzonesequenceactive',
+            self.szs_callback,
+            10)
+        self.szsactive = False
+
         # create cmd_vel publisher for moving TurtleBot
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
         
@@ -360,7 +368,11 @@ class Searchingphase(Node):
             self.makingdecision = not (msg.data)
             if self.makingdecision:
                 print('DECISION POINT')
-   
+
+    def szs_callback(self, msg):
+        print('SURVIVOR ZONE SEQUENCE ACTIVE')
+        self.szsactive = msg.data
+
     def fullrotation(self):
         # rotate the bot 360
         print('fullrotation')
@@ -375,6 +387,8 @@ class Searchingphase(Node):
             rclpy.spin_once(self)
             if 0 < math.degrees(abs(self.yaw-yaw)) < 10:
              break
+            if self.szsactive:
+                break
         twist.linear.x = 0.0 
         twist.angular.z = 0.0
         self.publisher_.publish(twist) # stop rotation
@@ -484,11 +498,16 @@ def main(args=None):
         rclpy.spin_once(searchingphase)
         if (searchingphase.makingdecision):
             searchingphase.fullrotation()
-            searchingphase.decisionpointselect()            
+            if not searchingphase.szsactive:
+                searchingphase.decisionpointselect()            
         '''
         if (searchingphase.survivorsfound == 2):
             # ramp sequence
         '''
+        # freeze pathfinder while szsactive
+        while searchingphase.szsactive:
+            rclpy.spin_once(searchingphase)
+            print('stuck in szs')
 
 
 

@@ -30,7 +30,8 @@ import time
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 stop_distance_from_dp = 8 # distance from decision point to stop pathfinder
 stop_distance_from_wp = 4 # distance from waypoint to change to next waypoint
-stop_distance_from_obstacle = 0.18 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
+stop_distance_from_obstacle = 0.25 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
+#stop_distance_from_obstacle_behind = 3 # distance from obstacle behind to activate obstacleavoidance. this is to account for launcher behind turtlebot
 waypoint_gap = 5 # number of grids between pure pursuit waypoints
 rotatechange = 0.3 # speed of rotation
 speedchange = 0.12 # speed of linear movement
@@ -224,6 +225,14 @@ class Pathfinder(Node):
         self.obstacle_angle = 0
         self.obstacle = False
 
+        # create subscription to survivorzonesequence
+        self.szs_subscription = self.create_subscription(
+            Bool,
+            'survivorzonesequenceactive',
+            self.szs_callback,
+            10)
+        self.szsactive = False
+
         # create pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
         self.pathfinderactive = False
@@ -308,7 +317,11 @@ class Pathfinder(Node):
             print(f"Obstacle Angle: {rot_angle}")
             self.obstacle_angle = rot_angle
             self.obstacle = True
-            
+
+    def szs_callback(self, msg):
+        print('SURVIVOR ZONE SEQUENCE ACTIVE')
+        self.szsactive = msg.data
+
     # creates path and then reduce path to waypoints
     def createpath(self):
         start = (self.grid_y, self.grid_x)
@@ -378,13 +391,14 @@ class Pathfinder(Node):
                 if (y_dist_to_wp < stop_distance_from_wp) and (x_dist_to_wp < stop_distance_from_wp):
                     reachedwaypoint = True
                 rclpy.spin_once(self)
-            # if robot detects obstacle, exit pure pursuit
-                if self.obstacle is True or self.reacheddp:
+            # if robot detects obstacle, reacheddp, or szsactive, exit pure pursuit
+                if self.obstacle is True or self.reacheddp or self.szsactive:
                     print('break 1')
                     break
-            if self.obstacle is True or self.reacheddp:
+            if self.obstacle is True or self.reacheddp or self.szsactive:
                 print('break 2')
                 break
+        # stop robot before ending pure pursuit
         twist = Twist()
         twist.linear.x = 0.0
         twist.angular.z = 0.0
@@ -392,7 +406,9 @@ class Pathfinder(Node):
         if self.obstacle is True:
             self.obstacleavoidance()
 
-        if len(self.waypoints) == 0:
+        # if no more waypoints, take it that reacheddp
+        # if szsactive, say reacheddp so that can killpathfinder 
+        if len(self.waypoints) == 0 or self.szsactive:
             self.reacheddp = True
         self.killpathfinder()
 
@@ -423,7 +439,7 @@ class Pathfinder(Node):
             c_change = c_target_yaw / c_yaw # get difference in angle between current and target
             c_dir_diff = np.sign(c_change.imag) # get the sign to see if we can stop
             # stop rotatebot if obstacle detected, unless rotatebot was called from obstacleavoidance
-            if self.obstacle is True and not obstacleavoidance:
+            if (self.obstacle is True and not obstacleavoidance) or self.szsactive:
                 break
             
         # stop rotation
@@ -499,6 +515,10 @@ def main(args=None):
                 print('Pathfinderactive')
                 pathfinder.createpath()
                 pathfinder.purepursuit()
+        # freeze pathfinder while szsactive
+        while pathfinder.szsactive:
+            rclpy.spin_once(pathfinder)
+            print('stuck in szs')
                 
 
     
