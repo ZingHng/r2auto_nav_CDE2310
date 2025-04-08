@@ -9,7 +9,7 @@ import board
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import adafruit_amg88xx
@@ -40,7 +40,7 @@ class SurvivorZoneSequence(Node):
     def __init__(self):
         super().__init__('Survivor_Zone_Sequence')
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
-        self.survivor_publisher = self.create_publisher(String, 'survivor', 10)
+        self.survivor_publisher = self.create_publisher(Bool, 'survivorzonesequenceactive', 10)
         self.survivor_sequence = False
         self.scan_subscription = self.create_subscription(
             LaserScan,
@@ -67,7 +67,6 @@ class SurvivorZoneSequence(Node):
     def odom_callback(self, msg):
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
-        print(f"roll={self.roll}, pitch{self.pitch}, yaw={self.yaw}")
     
     def rotatebot(self, rot_angle):
         twist = Twist()
@@ -136,8 +135,8 @@ class SurvivorZoneSequence(Node):
                 print(f"{counter} current{x, y}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
-                    survivor_msg = String()
-                    survivor_msg.data = "FOUND"
+                    survivor_msg = Bool()
+                    survivor_msg.data = True
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
                 else:
@@ -147,8 +146,8 @@ class SurvivorZoneSequence(Node):
                 left_half, right_half = np.hsplit(pixels, 2)
                 stay_survivor_sequence = self.approach_victim(left_half, right_half)
                 if not stay_survivor_sequence:
-                    survivor_msg = String()
-                    survivor_msg.data = "RESCUED"
+                    survivor_msg = Bool()
+                    survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
                     self.activations.append(self.current_position())
                     self.rotatebot(180)
