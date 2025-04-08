@@ -155,7 +155,7 @@ class SurvivorZoneSequence(Node):
                     survivor_msg = Bool()
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
-                    self.activations.append(self.current_position())
+                    self.activations.append(self.position)
                     print(self.activations)
                     self.rotatebot(180)
                     self.survivor_sequence = False
