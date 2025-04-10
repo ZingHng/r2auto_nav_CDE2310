@@ -146,7 +146,7 @@ class SurvivorZoneSequence(Node):
 \n\n\n
 LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | max: {np.max(sensor.pixels)}*C
+TEMP     | target={max_temp} max: {np.max(sensor.pixels)}*C
 POSITION | x={self.position[0]}, y={self.position[1]}
 STORAGE  | counter={counter}, survivor_sequence={self.survivor_sequence}
          | activations={self.activations}
@@ -155,7 +155,7 @@ STORAGE  | counter={counter}, survivor_sequence={self.survivor_sequence}
             print(f"""
 \n\n\n
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | max: {np.max(sensor.pixels)}*C
+TEMP     | target={max_temp} max: {np.max(sensor.pixels)}*C
 POSITION | x={self.position[0]}, y={self.position[1]}
 STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
          | activations={self.activations}
@@ -183,11 +183,10 @@ STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
-                stay_survivor_sequence = self.approach_victim(left_half, right_half)
-                if not stay_survivor_sequence:
+                self.survivor_sequence = self.approach_victim(left_half, right_half)
+                if not self.survivor_sequence:
                     self.rotatebot(180)
                     self.activations.append(self.position)
-                    self.survivor_sequence = False
                     survivor_msg = Bool()
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
