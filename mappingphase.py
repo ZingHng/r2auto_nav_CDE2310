@@ -20,7 +20,7 @@ import time
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 minimum_frontier_length = 5
-do_not_cross_line = 5 # about 3/-3? depends on direction
+do_not_cross_line = -3 # about 3/-3? depends on direction
 
 class Frontier(Node):
 
@@ -99,9 +99,9 @@ class Frontier(Node):
             old_map_origin = self.map_origin # save previous map origin to update decision point relative to new map later
         self.map_origin = msg.info.origin.position # real world coordinates of the origin of map from /map topic relative to robot start point
         map_res = msg.info.resolution # get map resolution
-        self.grid_x = round((cur_pos.x - self.map_origin.x) / map_res) # x position of robot on map from /map topic
-        self.grid_y = round(((cur_pos.y - self.map_origin.y) / map_res)) # y posiiton of robot on map from /map topic
-        # self.get_logger().info('Grid Y: %i Grid X: %i' % (self.grid_y, self.grid_x))
+        if (cur_pos is not None):
+            self.grid_x = round((cur_pos.x - self.map_origin.x) / map_res) # x position of robot on map from /map topic
+            self.grid_y = round(((cur_pos.y - self.map_origin.y) / map_res)) # y posiiton of robot on map from /map topic
 
         # update dp based on new map
         if (self.decisionpoint is not None) and (self.map_origin is not None) and (not old_map_origin == self.map_origin):
@@ -135,8 +135,11 @@ class Frontier(Node):
         #print(f"self.decisionpoint: {self.decisionpoint}")
 
     def szs_callback(self, msg):
-        print('SURVIVOR ZONE SEQUENCE ACTIVE')
         self.szsactive = msg.data
+        if self.szsactive:
+            print('SURVIVOR ZONE SEQUENCE ACTIVE')
+        else:
+            print('SURVIVOR ZONE SEQUENCE COMPLETE')
 
     def frontiersearch(self):        
         # 8 directions of neighbours
@@ -242,7 +245,7 @@ def main(args=None):
 
     while True:
         rclpy.spin_once(frontier)
-        if (frontier.makingdecision) and (frontier.mappingphaseactive):
+        if (frontier.makingdecision) and (frontier.mappingphaseactive) and (frontier.grid_x is not None) and (frontier.grid_y is not None):
             frontier.frontiersearch()
             frontier.frontierselect()
 
