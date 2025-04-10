@@ -86,7 +86,7 @@ class SurvivorZoneSequence(Node):
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info('No transformation found')
             return
-        self.position = trans.transform.translation # real world coordinates of robot relative to robot start point
+        self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
     def rotatebot(self, rot_angle):
         twist = Twist()
@@ -142,9 +142,8 @@ class SurvivorZoneSequence(Node):
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > max_temp:
-                x = self.position.x
-                y = self.position.y
-                print(f"{counter} current{x, y}")
+                x, y = self.position
+                print(f"{counter} current{x* 100, y*100}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
                     survivor_msg = Bool()
