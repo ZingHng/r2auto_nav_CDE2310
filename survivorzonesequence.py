@@ -75,14 +75,17 @@ class SurvivorZoneSequence(Node):
         self.temp_grid = None
 
     def scan_callback(self, msg):
+        print("Scan Called Back")
         self.laser_range = np.array(msg.ranges)
         self.laser_range[self.laser_range==0] = np.nan
 
     def odom_callback(self, msg):
+        print("Odom Called Back")
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
 
     def occ_callback(self, msg):
+        print("Occ Called Back")
         try:
             trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
@@ -91,6 +94,7 @@ class SurvivorZoneSequence(Node):
         self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
     def rotatebot(self, rot_angle):
+        print("Start Rotate")
         twist = Twist()
         current_yaw = self.yaw
         c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
@@ -142,7 +146,7 @@ class SurvivorZoneSequence(Node):
         if len(self.laser_range):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
             print(f"""
-\n\n
+\n\n\n
 LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | max: {np.max(sensor.pixels)}*C
@@ -152,7 +156,7 @@ STORAGE  | counter={counter}, survivor_sequence={self.survivor_sequence}
 """)
         else:
             print(f"""
-\n\n
+\n\n\n
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | max: {np.max(sensor.pixels)}*C
 POSITION | x={self.position[0]}, y={self.position[1]}
@@ -162,7 +166,7 @@ STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
 
     
     def looper(self):
-        rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
+        rclpy.spin_once(self) # timeout_sec=0.1 in case lidar doesnt work
         print("SurvivorZoneSequence")
         counter = 1
         while rclpy.ok():
@@ -178,7 +182,7 @@ STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
                 else:
-                    print(f"Too close to past firing: current=({x*100, y*100}) nearest={nearest_fire}")
+                    print(f"Too close to past firing: current=({x, y}) nearest={nearest_fire}")
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
