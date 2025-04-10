@@ -185,12 +185,12 @@ STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
                 left_half, right_half = np.hsplit(pixels, 2)
                 stay_survivor_sequence = self.approach_victim(left_half, right_half)
                 if not stay_survivor_sequence:
+                    self.rotatebot(180)
+                    self.activations.append(self.position)
+                    self.survivor_sequence = False
                     survivor_msg = Bool()
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
-                    self.activations.append(self.position)
-                    self.rotatebot(180)
-                    self.survivor_sequence = False
             counter += 1
 
 def main(args=None):
