@@ -138,12 +138,24 @@ class SurvivorZoneSequence(Node):
             return False
         return True
     
+    def debugger(self):
+        closest_LIDAR_index = np.nanargmin(self.laser_range)
+        print(f"""
+LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+TEMP     | max: {np.max(sensor.pixels)}*C
+POSITION | x={self.position[0]}, y={self.position[1]}
+STORAGE  | survivor_sequence={self.survivor_sequence}
+         | activations={self.activations}
+""")
+    
     def looper(self):
         rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
         print("SurvivorZoneSequence")
         counter = 1
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
+            self.debugger()
             if not self.survivor_sequence and np.max(pixels) > max_temp:
                 x, y = self.position
                 print(f"{counter} current{x* 100, y*100}")
@@ -164,7 +176,6 @@ class SurvivorZoneSequence(Node):
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
                     self.activations.append(self.position)
-                    print(self.activations)
                     self.rotatebot(180)
                     self.survivor_sequence = False
             counter += 1
