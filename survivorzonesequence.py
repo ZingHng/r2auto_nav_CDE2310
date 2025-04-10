@@ -72,7 +72,7 @@ class SurvivorZoneSequence(Node):
         self.tfBuffer = tf2_ros.Buffer()
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
         self.position = (0,0)
-        self.temp_grid = None
+        self.nearest_fire = None
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
@@ -139,47 +139,36 @@ class SurvivorZoneSequence(Node):
             return False
         return True
     
-    def debugger(self, counter):
+    def debugger(self):
+        print("\n\n\n\n\n")
+        print(time.strftime("%H:%M:%S",time.localtime()))
         if len(self.laser_range):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
-            print(f"""
-\n\n\n
-LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+            print(f"LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*")
+        print(f"""
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp} max: {np.max(sensor.pixels)}*C
-POSITION | x={self.position[0]}, y={self.position[1]}
-STORAGE  | counter={counter}, survivor_sequence={self.survivor_sequence}
+TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+POSITION | (x, y)=({self.position[0]}, {self.position[1]})
+STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_sequence}
          | activations={self.activations}
 """)
-        else:
-            print(f"""
-\n\n\n
-ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp} max: {np.max(sensor.pixels)}*C
-POSITION | x={self.position[0]}, y={self.position[1]}
-STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
-         | activations={self.activations}
-""")
-
-    
+  
     def looper(self):
         print("SurvivorZoneSequence")
-        counter = 1
         while rclpy.ok():
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
-            self.debugger(counter)
+            self.debugger()
             if not self.survivor_sequence and np.max(pixels) > max_temp:
                 x, y = self.position
-                print(f"{counter} current{x* 100, y*100}")
-                nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
-                if nearest_fire > FIRINGSAFETYZONESQ:
+                self.nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
+                if self.nearest_fire > FIRINGSAFETYZONESQ:
                     survivor_msg = Bool()
                     survivor_msg.data = True
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
                 else:
-                    print(f"Too close to past firing: current=({x, y}) nearest={nearest_fire}")
+                    print(f"Too close to past firing: current=({x, y}) nearest={self.nearest_fire}")
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
@@ -190,7 +179,6 @@ STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
                     survivor_msg = Bool()
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
-            counter += 1
 
 def main(args=None):
     rclpy.init(args=args)
