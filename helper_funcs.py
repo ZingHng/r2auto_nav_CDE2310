@@ -84,11 +84,11 @@ def fire_sequence():
         time.sleep(2)
         print("Stepper Turn")
         StepperTurn()
-        time.sleep(3)
+        time.sleep(0.75)
         print("Flywheel Stop")
         FlywheelStop()
         print("Rest")
-        time.sleep(2)
+        time.sleep(3)
     except:
         FlywheelStop()
     finally:

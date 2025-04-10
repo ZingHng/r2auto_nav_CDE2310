@@ -22,7 +22,8 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 from helper_funcs import fire_sequence, euler_from_quaternion
 
 DELTASPEED = 0.05
-ROTATECHANGE = 0.1
+ROTATESLOW = 0.1
+ROTATEFAST = 0.25
 SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
@@ -32,7 +33,7 @@ VIEWANGLE = 45 # 0 +-ViewAngle
 try:
     max_temp = float(input("Max Temp?"))
 except:
-    max_temp = 29.0
+    max_temp = 30.0
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -96,7 +97,7 @@ class SurvivorZoneSequence(Node):
         c_change = c_target_yaw / c_yaw
         c_change_dir = np.sign(c_change.imag)
         twist.linear.x = 0.0
-        twist.angular.z = c_change_dir * ROTATECHANGE
+        twist.angular.z = c_change_dir * ROTATEFAST
         self.publisher_.publish(twist)
         c_dir_diff = c_change_dir
         while(c_change_dir * c_dir_diff > 0):
@@ -124,9 +125,9 @@ class SurvivorZoneSequence(Node):
         right_sum = np.sum(right)
         left_right_error = left_sum - right_sum
         if left_right_error > TEMPDIFFTOLERANCE:
-            twist.angular.z = ROTATECHANGE
+            twist.angular.z = ROTATESLOW
         elif left_right_error < -TEMPDIFFTOLERANCE:
-            twist.angular.z = -ROTATECHANGE
+            twist.angular.z = -ROTATESLOW
         elif lidar_shortest > SAFETYDISTANCE:
             twist.linear.x = DELTASPEED
         self.publisher_.publish(twist)
@@ -141,7 +142,8 @@ class SurvivorZoneSequence(Node):
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > max_temp:
-                x, y = self.position
+                print(self.position)
+                x, y, z = self.position
                 print(f"{counter} current{x, y}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
