@@ -137,6 +137,7 @@ class SurvivorZoneSequence(Node):
         return True
     
     def looper(self):
+        rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
         print("SurvivorZoneSequence")
         counter = 1
         while rclpy.ok():
@@ -164,9 +165,6 @@ class SurvivorZoneSequence(Node):
                     print(self.activations)
                     self.rotatebot(180)
                     self.survivor_sequence = False
-
-
-            rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
             counter += 1
 
 def main(args=None):
