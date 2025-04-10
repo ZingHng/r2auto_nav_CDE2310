@@ -138,7 +138,7 @@ class SurvivorZoneSequence(Node):
             return False
         return True
     
-    def debugger(self):
+    def debugger(self, count):
         if len(self.laser_range):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
             print(f"""
@@ -147,7 +147,16 @@ LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {clo
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | max: {np.max(sensor.pixels)}*C
 POSITION | x={self.position[0]}, y={self.position[1]}
-STORAGE  | survivor_sequence={self.survivor_sequence}
+STORAGE  | count= {count}, survivor_sequence={self.survivor_sequence}
+         | activations={self.activations}
+""")
+        else:
+            print(f"""
+\n\n
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+TEMP     | max: {np.max(sensor.pixels)}*C
+POSITION | x={self.position[0]}, y={self.position[1]}
+STORAGE  | count= {count}, survivor_sequence={self.survivor_sequence}
          | activations={self.activations}
 """)
 
@@ -158,7 +167,7 @@ STORAGE  | survivor_sequence={self.survivor_sequence}
         counter = 1
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
-            self.debugger()
+            self.debugger(count)
             if not self.survivor_sequence and np.max(pixels) > max_temp:
                 x, y = self.position
                 print(f"{counter} current{x* 100, y*100}")
