@@ -30,8 +30,8 @@ import time
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 stop_distance_from_dp = 8 # distance from decision point to stop pathfinder
 stop_distance_from_wp = 4 # distance from waypoint to change to next waypoint
-stop_distance_from_obstacle = 0.25 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
-#stop_distance_from_obstacle_behind = 3 # distance from obstacle behind to activate obstacleavoidance. this is to account for launcher behind turtlebot
+stop_distance_from_obstacle = 0.18 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
+stop_distance_from_obstacle_behind = 0.3 # distance from obstacle behind to activate obstacleavoidance. this is to account for launcher behind turtlebot
 waypoint_gap = 5 # number of grids between pure pursuit waypoints
 rotatechange = 0.3 # speed of rotation
 speedchange = 0.12 # speed of linear movement
@@ -224,6 +224,7 @@ class Pathfinder(Node):
         self.laser_range = np.array([])
         self.obstacle_angle = 0
         self.obstacle = False
+        self.direction = 0 # 1 is forward, 2 is reverse, 0 is neutral
 
         # create subscription to survivorzonesequence
         self.szs_subscription = self.create_subscription(
@@ -304,10 +305,10 @@ class Pathfinder(Node):
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges) # create numpy array of laser scans
         self.laser_range[self.laser_range==0] = np.nan # replace 0's with nan
-        lr2i = np.nanargmin(self.laser_range)        
+        lr2i = np.nanargmin(self.laser_range)     
         # if closest point is less than stop distance, initiate obstacle avoidance sequence and set obstacle to true to break while loops in purepursuit/rotatebot
-        if self.laser_range[lr2i] < stop_distance_from_obstacle:
-            print('OBSTACLE DETECTED')
+        if (self.laser_range[lr2i] < stop_distance_from_obstacle) and (lr2i < 135 or 225 < lr2i):
+            print('OBSTACLE DETECTED FRONT')
             # convert lr2i to real world angle
             rot_angle = lr2i + math.degrees(self.yaw)
             rot_angle = rot_angle % 360
@@ -317,6 +318,21 @@ class Pathfinder(Node):
             print(f"Obstacle Angle: {rot_angle}")
             self.obstacle_angle = rot_angle
             self.obstacle = True
+            self.direction = 2 # front face and reverse from obstacle
+        elif (self.laser_range[lr2i] < stop_distance_from_obstacle_behind) and (135 <= lr2i <= 225):
+            print('OBSTACLE DETECTED BACK')
+            # convert lr2i to real world angle
+            rot_angle = lr2i + math.degrees(self.yaw) + 180
+            rot_angle = rot_angle % 360
+            # If the angle is greater than 180, subtract 360 to bring it to the range [-180, 180)
+            if rot_angle > 180:
+                rot_angle -= 360
+            print(f"Obstacle Angle: {rot_angle}")
+            self.obstacle_angle = rot_angle
+            self.obstacle = True
+            self. direction = 1 # backface and drive forward away from obstacle
+        else:
+            self.obstacle = False
 
     def szs_callback(self, msg):
         print('SURVIVOR ZONE SEQUENCE ACTIVE')
@@ -487,13 +503,30 @@ class Pathfinder(Node):
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
-        self.obstacle = False # so that it rotate bot won't cut while trying to rotate during obstacle avoidance sequence
-        self.rotatebot(float(self.obstacle_angle), True) # rotate towards direction of closest point
-        twist.linear.x = -speedchange # reverse away from closest point slightly
-        self.publisher_.publish(twist)
-        time.sleep(0.5) # best timing is 1ish
-        twist.linear.x = 0.0 # stop robot
-        self.publisher_.publish(twist)
+        self.rotatebot(float(self.obstacle_angle), True) # rotate to face/backface direction of closest point
+        if self.direction == 2: # if obstacle is from the front, reverse away
+            while True:
+                twist.linear.x = -speedchange # reverse away from closest point slightly
+                self.publisher_.publish(twist)
+                time.sleep(0.3) # best timing is 1ish
+                twist.linear.x = 0.0 # stop robot
+                self.publisher_.publish(twist)
+                print('reversing from obstacle')
+                rclpy.spin_once(self)
+                if not self.obstacle:
+                    break
+        if self.direction == 1: # if obstacle is from the back, move forward awway
+            while True:
+                twist.linear.x = speedchange # reverse away from closest point slightly
+                self.publisher_.publish(twist)
+                time.sleep(0.3) # best timing is 1ish
+                twist.linear.x = 0.0 # stop robot
+                self.publisher_.publish(twist)
+                print('moving forward from obstacle')
+                rclpy.spin_once(self)
+                if not self.obstacle:
+                    break
+        self.direction = 0 # reset direction to neutral
 
         
 
