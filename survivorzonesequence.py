@@ -75,17 +75,14 @@ class SurvivorZoneSequence(Node):
         self.temp_grid = None
 
     def scan_callback(self, msg):
-        print("Scan Called Back")
         self.laser_range = np.array(msg.ranges)
         self.laser_range[self.laser_range==0] = np.nan
 
     def odom_callback(self, msg):
-        print("Odom Called Back")
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
 
     def occ_callback(self, msg):
-        print("Occ Called Back")
         try:
             trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
@@ -166,10 +163,10 @@ STORAGE  | count= {counter}, survivor_sequence={self.survivor_sequence}
 
     
     def looper(self):
-        rclpy.spin_once(self) # timeout_sec=0.1 in case lidar doesnt work
         print("SurvivorZoneSequence")
         counter = 1
         while rclpy.ok():
+            rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
             self.debugger(counter)
             if not self.survivor_sequence and np.max(pixels) > max_temp:
