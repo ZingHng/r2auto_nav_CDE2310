@@ -141,6 +141,7 @@ class SurvivorZoneSequence(Node):
     def debugger(self):
         closest_LIDAR_index = np.nanargmin(self.laser_range)
         print(f"""
+\n\n
 LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | max: {np.max(sensor.pixels)}*C
