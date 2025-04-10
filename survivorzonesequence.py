@@ -31,9 +31,11 @@ FIRINGSAFETYZONESQ = 1
 VIEWANGLE = 45 # 0 +-ViewAngle
 
 try:
-    max_temp = float(input("Max Temp?"))
+    max_temp = float(input("Max Temp? "))
 except:
     max_temp = 30.0
+
+print(f"Max Temp {max_temp}")
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -70,7 +72,7 @@ class SurvivorZoneSequence(Node):
         self.tfBuffer = tf2_ros.Buffer()
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
         self.position = (0,0)
-        self.temp_grid = None
+        self.nearest_fire = None
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
@@ -86,9 +88,10 @@ class SurvivorZoneSequence(Node):
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info('No transformation found')
             return
-        self.position = trans.transform.translation # real world coordinates of robot relative to robot start point
+        self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
     def rotatebot(self, rot_angle):
+        print("Start Rotate")
         twist = Twist()
         current_yaw = self.yaw
         c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
@@ -136,39 +139,54 @@ class SurvivorZoneSequence(Node):
             return False
         return True
     
+    def debugger(self):
+        if len(self.laser_range):
+            closest_LIDAR_index = np.nanargmin(self.laser_range)
+            print(f"""\n\n\n\n
+{time.strftime("%H:%M:%S",time.localtime())}
+LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+POSITION | (x, y)=({self.position[0]}, {self.position[1]})
+STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_sequence}
+         | activations={self.activations}
+""")
+        else:
+            print(f"""\n\n\n\n
+{time.strftime("%H:%M:%S",time.localtime())}
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+POSITION | (x, y)=({self.position[0]}, {self.position[1]})
+STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_sequence}
+         | activations={self.activations}
+""")
+  
     def looper(self):
         print("SurvivorZoneSequence")
-        counter = 1
         while rclpy.ok():
+            rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
+            self.debugger()
             if not self.survivor_sequence and np.max(pixels) > max_temp:
-                x = self.position.x
-                y = self.position.y
-                print(f"{counter} current{x, y}")
-                nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
-                if nearest_fire > FIRINGSAFETYZONESQ:
+                x, y = self.position
+                self.nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
+                if self.nearest_fire > FIRINGSAFETYZONESQ:
                     survivor_msg = Bool()
                     survivor_msg.data = True
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
                 else:
-                    print(f"Too close to past firing: current=({x, y}) nearest={nearest_fire}")
+                    print(f"Too close to past firing: current=({x, y}) nearest={self.nearest_fire}")
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
-                stay_survivor_sequence = self.approach_victim(left_half, right_half)
-                if not stay_survivor_sequence:
+                self.survivor_sequence = self.approach_victim(left_half, right_half)
+                if not self.survivor_sequence:
+                    self.rotatebot(180)
+                    self.activations.append(self.position)
                     survivor_msg = Bool()
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
-                    self.activations.append(self.position)
-                    print(self.activations)
-                    self.rotatebot(180)
-                    self.survivor_sequence = False
-
-
-            rclpy.spin_once(self, timeout_sec=0.1) # timeout_sec=0.1 in case lidar doesnt work
-            counter += 1
 
 def main(args=None):
     rclpy.init(args=args)
