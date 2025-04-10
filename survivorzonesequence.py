@@ -140,11 +140,11 @@ class SurvivorZoneSequence(Node):
         return True
     
     def debugger(self):
-        print("\n\n\n\n\n")
-        print(time.strftime("%H:%M:%S",time.localtime()))
         if len(self.laser_range):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
-            print(f"""LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+            print(f"""\n\n\n\n
+{time.strftime("%H:%M:%S",time.localtime())}
+LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
@@ -152,7 +152,9 @@ STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_seq
          | activations={self.activations}
 """)
         else:
-            print(f"""ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+            print(f"""\n\n\n\n
+{time.strftime("%H:%M:%S",time.localtime())}
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
 STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_sequence}
