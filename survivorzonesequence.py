@@ -31,9 +31,11 @@ FIRINGSAFETYZONESQ = 1
 VIEWANGLE = 45 # 0 +-ViewAngle
 
 try:
-    max_temp = float(input("Max Temp?"))
+    max_temp = float(input("Max Temp? "))
 except:
     max_temp = 30.0
+
+print(f"Max Temp {max_temp}")
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
