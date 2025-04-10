@@ -142,8 +142,8 @@ class SurvivorZoneSequence(Node):
         while rclpy.ok():
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > max_temp:
-                print(self.position)
-                x, y, z = self.position
+                x = self.position.x
+                y = self.position.y
                 print(f"{counter} current{x, y}")
                 nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
                 if nearest_fire > FIRINGSAFETYZONESQ:
