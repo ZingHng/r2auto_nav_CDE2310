@@ -9,7 +9,7 @@ import board
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
+from std_msgs.msg import Bool
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import adafruit_amg88xx
@@ -20,10 +20,12 @@ from helper_funcs import fire_sequence
 
 DELTASPEED = 0.05
 MAXTEMP = 32.0
-ROTATECHANGE = 0.1
+ROTATESLOW = 0.1
+ROTATEFAST = 0.25
 SAFETYDISTANCE = 0.250
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
+VIEWANGLE = 45
 
 # initialize the sensor
 i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -56,6 +58,7 @@ class Ramp(Node):
             'scan',
             self.scan_callback,
             qos_profile_sensor_data)
+        self.laser_range = np.array([])
         self.odom_subscription = self.create_subscription(
             Odometry,
             'odom',
@@ -64,9 +67,12 @@ class Ramp(Node):
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
-        self.survivor_sequence = False
-        self.temp_grid = None
-        self.laser_range = np.array([])
+        self.ramp_subscription = self.create_subscription(
+            Bool,
+            'rampsequence',
+            self.ramp_callback,
+            10)
+        self.ramp_seq = False
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
@@ -80,44 +86,41 @@ class Ramp(Node):
         pass
 
     def looper(self):
-        counter = 1
-        while rclpy.ok():
-            print(f"LOOP{counter}")
-            pixels = np.array(sensor.pixels)
-
-            self.roll, self.pitch, self.yaw
-            
-            if np.max(pixels) < MAXTEMP: # INSECT BEHAVIOUR
-                twist = Twist()
-                twist.linear.x = 0.0
-                twist.angular.z = 0.0
-                if self.laser_range.size != 0:
-                    lidar_shortest = np.nanmin(self.laser_range)
-                else:
-                    lidar_shortest = 0
-                left, right = np.hsplit(pixels, 2)
-                left_right_error = np.sum(left) - np.sum(right)
-                if left_right_error > TEMPDIFFTOLERANCE:
-                    twist.angular.z = ROTATECHANGE
-                elif left_right_error < -TEMPDIFFTOLERANCE:
-                    twist.angular.z = -ROTATECHANGE
-                elif lidar_shortest > SAFETYDISTANCE:
-                    twist.linear.x = DELTASPEED
-                self.publisher_.publish(twist)
-                print(f"PUBBED twist.linear.x{twist.linear.x} twist.angular.z{twist.angular.z}")
-                if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
-                    print("FIRE")
-                    fire_sequence()
-                    print("FIRED")
-                    return False
+        while rclpy.ok() and :
             rclpy.spin_once(self) # timeout_sec=0.1 in case lidar doesnt work
+            pixels = np.array(sensor.pixels)
+            left_half, right_half = np.hsplit(pixels, 2)
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            if self.laser_range.size != 0:
+                laser_points = len(self.laser_range)
+                within_viewing_angle = math.ceil(VIEWANGLE/360 * laser_points)
+                self.laser_range[:laser_points - within_viewing_angle][within_viewing_angle:] = np.nan
+                lidar_shortest = np.nanmin(self.laser_range)
+            else:
+                lidar_shortest = 0
+            left_sum = np.sum(left_half)
+            right_sum = np.sum(right_half)
+            left_right_error = left_sum - right_sum
+            if left_right_error > TEMPDIFFTOLERANCE:
+                twist.angular.z = ROTATESLOW
+            elif left_right_error < -TEMPDIFFTOLERANCE:
+                twist.angular.z = -ROTATESLOW
+            elif lidar_shortest > SAFETYDISTANCE:
+                twist.linear.x = DELTASPEED
+            self.publisher_.publish(twist)
+            if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
+                fire_sequence()
+
+            
             print(f"LOOP{counter} DONE")
             counter += 1
 
 def main(args=None):
     rclpy.init(args=args)
     node_name = Ramp()
-    node_name.calibrate()
+    node_name.check()
     node_name.looper()
     node_name.destroy_node()
     rclpy.shutdown()

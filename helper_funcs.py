@@ -2,6 +2,8 @@ import time
 import RPi.GPIO as GPIO
 import math
 
+DEBUG = False
+
 def euler_from_quaternion(x, y, z, w):
     t0 = +2.0 * (w * x + y * z)
     t1 = +1.0 - 2.0 * (x * x + y * y)
@@ -72,27 +74,28 @@ def fire_sequence():
                 for pin in range(4):
                     GPIO.output(control_pins[pin], fullstep_seq[fullstep][pin])
                 time.sleep(0.001)
-    try:
-        print("Flywheel Start")
-        FlywheelStart()
-        time.sleep(5)
-        print("Stepper Turn")
-        StepperTurn()
-        time.sleep(4)
-        print("Stepper Turn")
-        StepperTurn()
-        time.sleep(2)
-        print("Stepper Turn")
-        StepperTurn()
-        time.sleep(0.75)
-        print("Flywheel Stop")
-        FlywheelStop()
-        print("Rest")
-        time.sleep(3)
-    except:
-        FlywheelStop()
-    finally:
-        GPIO.cleanup()
+    if not DEBUG:
+        try:
+            print("Flywheel Start")
+            FlywheelStart()
+            time.sleep(5)
+            print("Stepper Turn")
+            StepperTurn()
+            time.sleep(4)
+            print("Stepper Turn")
+            StepperTurn()
+            time.sleep(2)
+            print("Stepper Turn")
+            StepperTurn()
+            time.sleep(0.75)
+            print("Flywheel Stop")
+            FlywheelStop()
+            print("Rest")
+            time.sleep(3)
+        except:
+            FlywheelStop()
+        finally:
+            GPIO.cleanup()
 
 if __name__ == '__main__':
     fire_sequence()

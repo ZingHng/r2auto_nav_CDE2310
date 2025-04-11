@@ -9,7 +9,7 @@ import board
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String, Bool
+from std_msgs.msg import Bool
 from sensor_msgs.msg import LaserScan, BatteryState
 from geometry_msgs.msg import Twist
 import adafruit_amg88xx
@@ -21,13 +21,13 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 
 from helper_funcs import fire_sequence, euler_from_quaternion
 
-DELTASPEED = 0.05
+DELTASPEED = 0.075
 ROTATESLOW = 0.1
 ROTATEFAST = 0.25
 SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
 TEMPDIFFTOLERANCE = 8 #Huat
-FIRINGSAFETYZONESQ = 1
+FIRINGSAFETYZONESQ = 0.25
 VIEWANGLE = 45 # 0 +-ViewAngle
 
 try:
@@ -72,7 +72,7 @@ class SurvivorZoneSequence(Node):
         self.tfBuffer = tf2_ros.Buffer()
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
         self.position = (0,0)
-        self.nearest_fire = None
+        self.nearest_fire_sq = None
         self.battery_subscription = self.create_subscription(
             BatteryState,
             'battery_state',
@@ -80,6 +80,12 @@ class SurvivorZoneSequence(Node):
             qos_profile_sensor_data)
         self.battery = 0.0
         self.voltage = 0.0
+        self.ramp_subscription = self.create_subscription(
+            Bool,
+            'rampsequence',
+            self.ramp_callback,
+            10)
+        self.ramp_seq = False
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
@@ -97,8 +103,11 @@ class SurvivorZoneSequence(Node):
             return
         self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
+    def ramp_callback(self, msg):
+        
+
     def battery_callback(self, msg):
-        self.battery = round(msg.percentage, 2)
+        self.battery = round(msg.percentage, 2) if msg.percentage > 40 else "__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__"
         self.voltage = round(msg.voltage, 2)
 
     def rotatebot(self, rot_angle):
@@ -152,43 +161,43 @@ class SurvivorZoneSequence(Node):
     def debugger(self):
         if len(self.laser_range):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
-            print(f"""\n\n\n\n
-{time.strftime("%H:%M:%S",time.localtime())}
+            print(f"""\n\n\n\n\n\n
+{time.strftime("%H:%M:%S.%f",time.localtime())}
 LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
-BATTERY  | percentage={self.battery}% voltage={self.voltage}V
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_sequence}
+STORAGE  | nearestfire={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
          | activations={self.activations}
 """)
         else:
-            print(f"""\n\n\n\n
-{time.strftime("%H:%M:%S",time.localtime())}
-BATTERY  | percentage={self.battery}% voltage={self.voltage}V
+            print(f"""\n\n\n\n\n\n
+{time.strftime("%H:%M:%S.%f",time.localtime())}
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_sequence}
+STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
          | activations={self.activations}
 """)
   
     def looper(self):
         print("SurvivorZoneSequence")
-        while rclpy.ok():
+        while rclpy.ok() and :
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
             self.debugger()
             if not self.survivor_sequence and np.max(pixels) > max_temp:
                 x, y = self.position
-                self.nearest_fire = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
-                if self.nearest_fire > FIRINGSAFETYZONESQ:
+                self.nearest_fire_sq = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
+                if self.nearest_fire_sq > FIRINGSAFETYZONESQ:
                     survivor_msg = Bool()
                     survivor_msg.data = True
                     self.survivor_sequence = True
                     self.survivor_publisher.publish(survivor_msg)
                 else:
-                    print(f"Too close to past firing: current=({x, y}) nearest={self.nearest_fire}")
+                    print(f"Too close to past firing: current=({x, y}) nearest={self.nearest_fire_sq}")
 
             if self.survivor_sequence:
                 left_half, right_half = np.hsplit(pixels, 2)
