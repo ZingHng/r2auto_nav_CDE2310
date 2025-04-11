@@ -138,23 +138,27 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
          | activations={self.activations}
 """)
 
-    def rotate(self, rad_angle): #rad_angle < 2pi
-        current_yaw = self.yaw
-        twist = Twist()
-        twist.linear.x = 0.0
-        current_yaw += TAU
-        total_angle = current_yaw+rad_angle
-        final_yaw = (total_angle) % (TAU) * ((-1) ** (1-(total_angle//(TAU)))) + 0.000000000001
-        if np.sign(rad_angle) == -1: #CCW
-            twist.angular.z = -ROTATESLOW
-            self.cmd_vel_publisher.publish(twist)
-        elif np.sign(rad_angle) == 1: #CW
-            twist.angular.z = -ROTATESLOW
-            self.cmd_vel_publisher.publish(twist)
-        while round(self.yaw/final_yaw,2) != 1.00:
-            rclpy.spin_once(self)
-        twist.angular.z = 0.0
-        self.cmd_vel_publisher.publish(twist)
+def rotate(self, rad_angle):  # rad_angle in radians, < 2π
+    def normalize_angle(angle):
+        return np.arctan2(np.sin(angle), np.cos(angle))  # [-π, π]
+    start_yaw = self.yaw
+    target_angle = normalize_angle(start_yaw + rad_angle)
+    twist = Twist()
+    # Determine rotation direction
+    if rad_angle > 0:  # CCW
+        twist.angular.z = ROTATESLOW
+    elif rad_angle < 0:  # CW
+        twist.angular.z = -ROTATESLOW
+    else:
+        print("No Rotation")
+        return  # No rotation needed
+    self.cmd_vel_publisher.publish(twist)
+    angle_diff = normalize_angle(target_angle - self.yaw)
+    while abs(angle_diff) > 0.01:
+        rclpy.spin_once(self)
+        angle_diff = normalize_angle(target_angle - self.yaw)
+    twist.angular.z = 0.0
+    self.cmd_vel_publisher.publish(twist)
 
     def approach_victim(self, left, right):
         twist = Twist()
