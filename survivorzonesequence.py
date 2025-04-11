@@ -111,6 +111,32 @@ class SurvivorZoneSequence(Node):
         self.battery = round(msg.percentage, 2) if msg.percentage > 40 else "__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__"
         self.voltage = round(msg.voltage, 2)
 
+    def debugger(self):
+        if not DEBUG:
+            return None
+        if len(self.laser_range):
+            closest_LIDAR_index = np.nanargmin(self.laser_range)
+            print(f"""\n\n\n\n\n\n
+{time.strftime("%H:%M:%S.%f",time.localtime())}
+LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+BATTERY  | voltage={self.voltage}V percentage={self.battery}%
+POSITION | (x, y)=({self.position[0]}, {self.position[1]})
+STORAGE  | nearestfire={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
+         | activations={self.activations}
+""")
+        else:
+            print(f"""\n\n\n\n\n\n
+{time.strftime("%H:%M:%S.%f",time.localtime())}
+ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
+TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+BATTERY  | voltage={self.voltage}V percentage={self.battery}%
+POSITION | (x, y)=({self.position[0]}, {self.position[1]})
+STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
+         | activations={self.activations}
+""")
+
     def rotatebot(self, rot_angle):
         print("Start Rotate")
         twist = Twist()
@@ -159,33 +185,6 @@ class SurvivorZoneSequence(Node):
             return False
         return True
     
-    def debugger(self):
-        if not DEBUG:
-            return None
-        if str(time.localtime())[-1] != 0:
-            return None
-        if len(self.laser_range):
-            closest_LIDAR_index = np.nanargmin(self.laser_range)
-            print(f"""\n\n\n\n\n\n
-{time.strftime("%H:%M:%S.%f",time.localtime())}
-LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
-ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
-BATTERY  | voltage={self.voltage}V percentage={self.battery}%
-POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfire={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
-         | activations={self.activations}
-""")
-        else:
-            print(f"""\n\n\n\n\n\n
-{time.strftime("%H:%M:%S.%f",time.localtime())}
-ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
-BATTERY  | voltage={self.voltage}V percentage={self.battery}%
-POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
-         | activations={self.activations}
-""")
     def smart_flip(self):
         left_lidar_half, right_lidar_half = np.hsplit(self.laser_range, 2)
         if np.sum(left_lidar_half) > np.sum(right_lidar_half):
