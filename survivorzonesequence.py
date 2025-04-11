@@ -26,9 +26,10 @@ ROTATESLOW = 0.1
 ROTATEFAST = 0.25
 SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
-TEMPDIFFTOLERANCE = 8 #Huat
+TOLERANCE = 8 #Huat
 FIRINGSAFETYZONESQ = 0.25
 VIEWANGLE = 45 # 0 +-ViewAngle
+DEBUG = False
 
 try:
     max_temp = float(input("Max Temp? "))
@@ -46,7 +47,7 @@ sensor = adafruit_amg88xx.AMG88XX(i2c_bus)
 class SurvivorZoneSequence(Node):
     def __init__(self):
         super().__init__('Survivor_Zone_Sequence')
-        self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
+        self.cmd_vel_publisher = self.create_publisher(Twist,'cmd_vel',10)
         self.survivor_publisher = self.create_publisher(Bool, 'survivorzonesequenceactive', 10)
         self.survivor_sequence = False
         self.scan_subscription = self.create_subscription(
@@ -104,7 +105,7 @@ class SurvivorZoneSequence(Node):
         self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
     def ramp_callback(self, msg):
-        
+        self.ramp_seq = msg.data
 
     def battery_callback(self, msg):
         self.battery = round(msg.percentage, 2) if msg.percentage > 40 else "__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__LOW_BATTERY__"
@@ -121,7 +122,7 @@ class SurvivorZoneSequence(Node):
         c_change_dir = np.sign(c_change.imag)
         twist.linear.x = 0.0
         twist.angular.z = c_change_dir * ROTATEFAST
-        self.publisher_.publish(twist)
+        self.cmd_vel_publisher.publish(twist)
         c_dir_diff = c_change_dir
         while(c_change_dir * c_dir_diff > 0):
             rclpy.spin_once(self)
@@ -131,7 +132,7 @@ class SurvivorZoneSequence(Node):
             c_dir_diff = np.sign(c_change.imag)
         self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         twist.angular.z = 0.0
-        self.publisher_.publish(twist)
+        self.cmd_vel_publisher.publish(twist)
 
     def approach_victim(self, left, right):
         twist = Twist()
@@ -147,18 +148,20 @@ class SurvivorZoneSequence(Node):
         left_sum = np.sum(left)
         right_sum = np.sum(right)
         left_right_error = left_sum - right_sum
-        if left_right_error > TEMPDIFFTOLERANCE:
+        if left_right_error > TOLERANCE:
             twist.angular.z = ROTATESLOW
-        elif left_right_error < -TEMPDIFFTOLERANCE:
+        elif left_right_error < -TOLERANCE:
             twist.angular.z = -ROTATESLOW
         elif lidar_shortest > SAFETYDISTANCE:
             twist.linear.x = DELTASPEED
-        self.publisher_.publish(twist)
+        self.cmd_vel_publisher.publish(twist)
         if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
             return False
         return True
     
     def debugger(self):
+        if not DEBUG:
+            pass
         if len(self.laser_range):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
             print(f"""\n\n\n\n\n\n
@@ -181,10 +184,22 @@ POSITION | (x, y)=({self.position[0]}, {self.position[1]})
 STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
          | activations={self.activations}
 """)
-  
-    def looper(self):
+    def smart_flip(self):
+        left_lidar_half, right_lidar_half = np.hsplit(self.laser_range, 2)
+        if np.sum(left_lidar_half) > np.sum(right_lidar_half):
+            self.rotatebot(180)
+        else:
+            self.rotatebot(-180)
+        
+    def stop_bot(self):
+        twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = 0.0
+        self.cmd_vel_publisher.publish(twist)
+
+    def survivorzones(self):
         print("SurvivorZoneSequence")
-        while rclpy.ok() and :
+        while rclpy.ok() and not self.ramp_seq:
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
             self.debugger()
@@ -200,22 +215,68 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                     print(f"Too close to past firing: current=({x, y}) nearest={self.nearest_fire_sq}")
 
             if self.survivor_sequence:
-                left_half, right_half = np.hsplit(pixels, 2)
-                self.survivor_sequence = self.approach_victim(left_half, right_half)
+                left_heat_half, right_heat_half = np.hsplit(pixels, 2)
+                self.survivor_sequence = self.approach_victim(left_heat_half, right_heat_half)
                 if not self.survivor_sequence:
-                    self.rotatebot(180)
+                    self.smart_flip()
+                    self.stop_bot()
                     fire_sequence()
                     self.activations.append(self.position)
                     survivor_msg = Bool()
                     survivor_msg.data = False
                     self.survivor_publisher.publish(survivor_msg)
+    
+    def rampcheck(self):
+        if len(self.activations) < 2: # theres 2 guys in end zone
+            # spin
+            # rotate around, find anything above 26 degrees
+            # whack target
+            pass
+        aligned = False
+        while not aligned:
+            rclpy.spin_once(self)
+            if 1.55 < abs(self.yaw) < 1.59: # align to 90
+                twist = Twist()
+                twist.linear.x = 0.0
+                twist.angular.z = -np.sign(self.yaw) * ROTATESLOW
+                self.cmd_vel_publisher.publish(twist)
+                while 3.138 > abs(self.yaw):
+                    rclpy.spin_once(self)
+                self.stop_bot()
+            
+            if 3.138 < abs(self.yaw): # check
+                aligned = True
+        twist = Twist()
+        twist.linear.x = 0.5
+        twist.angular.z = 0.0
+        self.cmd_vel_publisher.publish(twist)
+
+
+    def rampclimb(self):
+        print("Ramp Climber")
+        while rclpy.ok():
+            rclpy.spin_once(self)
+            pixels = np.array(sensor.pixels)
+            self.debugger()
+            left_half, right_half = np.hsplit(pixels, 2)
+            self.survivor_sequence = self.approach_victim(left_half, right_half)
+            if not self.survivor_sequence:
+                self.smart_flip()
+                self.stop_bot()
+                fire_sequence()
 
 def main(args=None):
     rclpy.init(args=args)
     node_name = SurvivorZoneSequence()
-    node_name.looper()
-    node_name.destroy_node()
-    rclpy.shutdown()
+    try:
+        node_name.survivorzones()
+        node_name.rampcheck()
+        node_name.rampclimb()
+    except:
+        node_name.stop_bot()
+    finally:
+        node_name.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

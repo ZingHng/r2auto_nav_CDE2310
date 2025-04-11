@@ -96,6 +96,8 @@ def fire_sequence():
             FlywheelStop()
         finally:
             GPIO.cleanup()
+    else:
+        time.sleep(5)
 
 if __name__ == '__main__':
     fire_sequence()
