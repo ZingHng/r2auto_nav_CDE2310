@@ -29,7 +29,7 @@ TIMERPERIOD = 0.1
 TEMPTOLERANCE = 8 #Huat
 FIRINGSAFETYZONESQ = 0.25
 VIEWANGLE = 45 # 0 +-ViewAngle
-DEBUG = False
+DEBUG = True
 
 try:
     max_temp = float(input("Max Temp? "))
@@ -312,15 +312,11 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
 def main(args=None):
     rclpy.init(args=args)
     node_name = SurvivorZoneSequence()
-    try:
-        node_name.survivorzones()
-        node_name.rampcheck()
-        node_name.rampclimb()
-    except:
-        node_name.stop_bot()
-    finally:
-        node_name.destroy_node()
-        rclpy.shutdown()
+    node_name.survivorzones()
+    node_name.rampcheck()
+    node_name.rampclimb()
+    node_name.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
