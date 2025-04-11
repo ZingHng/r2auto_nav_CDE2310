@@ -30,6 +30,7 @@ TEMPTOLERANCE = 8 #Huat
 FIRINGSAFETYZONESQ = 0.25
 VIEWANGLE = 45 # 0 +-ViewAngle
 DEBUG = True
+TAU = 2*math.pi
 
 try:
     max_temp = float(input("Max Temp? "))
@@ -137,26 +138,21 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
          | activations={self.activations}
 """)
 
-    def rotatebot(self, rot_angle):
-        print("Start Rotate")
-        twist = Twist()
+    def rotate(self, rad_angle): #rad_angle < 2pi
         current_yaw = self.yaw
-        c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
-        target_yaw = current_yaw + math.radians(rot_angle)
-        c_target_yaw = complex(math.cos(target_yaw),math.sin(target_yaw))
-        c_change = c_target_yaw / c_yaw
-        c_change_dir = np.sign(c_change.imag)
+        twist = Twist()
         twist.linear.x = 0.0
-        twist.angular.z = c_change_dir * ROTATEFAST
-        self.cmd_vel_publisher.publish(twist)
-        c_dir_diff = c_change_dir
-        while(c_change_dir * c_dir_diff > 0):
+        current_yaw += TAU
+        total_angle = current_yaw+rad_angle
+        final_yaw = (total_angle) % (TAU) * ((-1) ** (1-(total_angle//(TAU)))) + 0.000000000001
+        if np.sign(rad_angle) == -1: #CCW
+            twist.angular.z = -ROTATESLOW
+            self.cmd_vel_publisher.publish(twist)
+        elif np.sign(rad_angle) == 1: #CW
+            twist.angular.z = -ROTATESLOW
+            self.cmd_vel_publisher.publish(twist)
+        while round(self.yaw/final_yaw,2) != 1.00:
             rclpy.spin_once(self)
-            current_yaw = self.yaw
-            c_yaw = complex(math.cos(current_yaw),math.sin(current_yaw))
-            c_change = c_target_yaw / c_yaw
-            c_dir_diff = np.sign(c_change.imag)
-        self.get_logger().info('End Yaw: %f' % math.degrees(current_yaw))
         twist.angular.z = 0.0
         self.cmd_vel_publisher.publish(twist)
 
@@ -187,11 +183,10 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
     
     def smart_flip(self):
         left_lidar_half, right_lidar_half = np.hsplit(self.laser_range[len(self.laser_range)%2:], 2)
-        print(np.nanmean(left_lidar_half), np.nanmean(right_lidar_half))
-        if np.nanmean(left_lidar_half) > np.nanmean(right_lidar_half):
-            self.rotatebot(179)
+        if np.sum(left_lidar_half) > np.sum(right_lidar_half):
+            self.rotate(math.pi)
         else:
-            self.rotatebot(-179)
+            self.rotate(-math.pi)
         
     def stop_bot(self):
         twist = Twist()
@@ -202,8 +197,9 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
     def move_away_from_wall(self):
         if len(self.laser_range) == 0:
             rclpy.spin_once(self)
-        angle = np.nanargmin(self.laser_range)/len(self.laser_range) * 360
-        self.rotatebot(angle)
+        angle = np.nanargmin(self.laser_range)/len(self.laser_range) * TAU
+        angle = angle if angle < math.pi else angle - TAU
+        self.rotate(angle)
         self.stop_bot()
         
 
@@ -281,7 +277,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                         continue
             self.stop_bot()
 
-        if 3.138 < abs(self.yaw): # align to 180 (victim)
+        if 3.138 < abs(self.yaw): # align to math.pi (victim)
             twist = Twist()
             twist.linear.x = 0.0
             twist.angular.z = -np.sign(self.yaw) * ROTATESLOW
