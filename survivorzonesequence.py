@@ -186,7 +186,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         return True
     
     def smart_flip(self):
-        left_lidar_half, right_lidar_half = np.hsplit(self.laser_range, 2)
+        left_lidar_half, right_lidar_half = np.hsplit(self.laser_range[(self.laser_range)%2:], 2)
         if np.sum(left_lidar_half) > np.sum(right_lidar_half):
             self.rotatebot(179)
         else:

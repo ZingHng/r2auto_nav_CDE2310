@@ -100,4 +100,5 @@ def fire_sequence():
         time.sleep(5)
 
 if __name__ == '__main__':
+    DEBUG = False
     fire_sequence()
