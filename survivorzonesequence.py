@@ -10,7 +10,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import String, Bool
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, BatteryState
 from geometry_msgs.msg import Twist
 import adafruit_amg88xx
 from rclpy.qos import qos_profile_sensor_data
@@ -73,6 +73,13 @@ class SurvivorZoneSequence(Node):
         self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
         self.position = (0,0)
         self.nearest_fire = None
+        self.battery_subscription = self.create_subscription(
+            BatteryState,
+            'battery_state',
+            self.battery_callback,
+            qos_profile_sensor_data)
+        self.battery = 0.0
+        self.voltage = 0.0
 
     def scan_callback(self, msg):
         self.laser_range = np.array(msg.ranges)
@@ -90,6 +97,10 @@ class SurvivorZoneSequence(Node):
             return
         self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
+    def battery_callback(self, msg):
+        self.battery = msg.percentage
+        self.voltage = msg.voltage
+
     def rotatebot(self, rot_angle):
         print("Start Rotate")
         twist = Twist()
@@ -144,6 +155,7 @@ class SurvivorZoneSequence(Node):
             print(f"""\n\n\n\n
 {time.strftime("%H:%M:%S",time.localtime())}
 LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+BATTERY  | percentage={self.battery} voltage={self.voltage}
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
@@ -153,6 +165,7 @@ STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_seq
         else:
             print(f"""\n\n\n\n
 {time.strftime("%H:%M:%S",time.localtime())}
+BATTERY  | percentage={self.battery} voltage={self.voltage}
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
