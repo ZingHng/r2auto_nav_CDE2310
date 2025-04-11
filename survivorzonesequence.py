@@ -135,6 +135,7 @@ class SurvivorZoneSequence(Node):
             twist.linear.x = DELTASPEED
         self.publisher_.publish(twist)
         if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
+            self.rotatebot(180)
             fire_sequence()
             return False
         return True
@@ -144,7 +145,7 @@ class SurvivorZoneSequence(Node):
             closest_LIDAR_index = np.nanargmin(self.laser_range)
             print(f"""\n\n\n\n
 {time.strftime("%H:%M:%S",time.localtime())}
-LIDAR    | closest:{np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
+LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
@@ -182,7 +183,6 @@ STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_seq
                 left_half, right_half = np.hsplit(pixels, 2)
                 self.survivor_sequence = self.approach_victim(left_half, right_half)
                 if not self.survivor_sequence:
-                    self.rotatebot(180)
                     self.activations.append(self.position)
                     survivor_msg = Bool()
                     survivor_msg.data = False
