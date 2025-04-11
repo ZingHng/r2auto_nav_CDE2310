@@ -135,8 +135,6 @@ class SurvivorZoneSequence(Node):
             twist.linear.x = DELTASPEED
         self.publisher_.publish(twist)
         if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
-            self.rotatebot(180)
-            fire_sequence()
             return False
         return True
     
@@ -183,6 +181,8 @@ STORAGE  | nearestfire={self.nearest_fire}, survivor_sequence={self.survivor_seq
                 left_half, right_half = np.hsplit(pixels, 2)
                 self.survivor_sequence = self.approach_victim(left_half, right_half)
                 if not self.survivor_sequence:
+                    self.rotatebot(180)
+                    fire_sequence()
                     self.activations.append(self.position)
                     survivor_msg = Bool()
                     survivor_msg.data = False
