@@ -138,52 +138,52 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
          | activations={self.activations}
 """)
 
-def rotate(self, rad_angle):  # rad_angle in radians, < 2π
-    def normalize_angle(angle):
-        return np.arctan2(np.sin(angle), np.cos(angle))  # [-π, π]
-    start_yaw = self.yaw
-    target_angle = normalize_angle(start_yaw + rad_angle)
-    twist = Twist()
-    # Determine rotation direction
-    if rad_angle > 0:  # CCW
-        twist.angular.z = ROTATESLOW
-    elif rad_angle < 0:  # CW
-        twist.angular.z = -ROTATESLOW
-    else:
-        print("No Rotation")
-        return  # No rotation needed
-    self.cmd_vel_publisher.publish(twist)
-    angle_diff = normalize_angle(target_angle - self.yaw)
-    while abs(angle_diff) > 0.01:
-        rclpy.spin_once(self)
+    def rotate(self, rad_angle):  # rad_angle in radians, < 2π
+        def normalize_angle(angle):
+            return np.arctan2(np.sin(angle), np.cos(angle))  # [-π, π]
+        start_yaw = self.yaw
+        target_angle = normalize_angle(start_yaw + rad_angle)
+        twist = Twist()
+        # Determine rotation direction
+        if rad_angle > 0:  # CCW
+            twist.angular.z = ROTATESLOW
+        elif rad_angle < 0:  # CW
+            twist.angular.z = -ROTATESLOW
+        else:
+            print("No Rotation")
+            return  # No rotation needed
+        self.cmd_vel_publisher.publish(twist)
         angle_diff = normalize_angle(target_angle - self.yaw)
-    twist.angular.z = 0.0
-    self.cmd_vel_publisher.publish(twist)
+        while abs(angle_diff) > 0.01:
+            rclpy.spin_once(self)
+            angle_diff = normalize_angle(target_angle - self.yaw)
+        twist.angular.z = 0.0
+        self.cmd_vel_publisher.publish(twist)
 
     def approach_victim(self, left, right):
-        twist = Twist()
-        twist.linear.x = 0.0
-        twist.angular.z = 0.0
-        if self.laser_range.size != 0:
-            laser_points = len(self.laser_range)
-            within_viewing_angle = math.ceil(VIEWANGLE/360 * laser_points)
-            self.laser_range[:laser_points - within_viewing_angle][within_viewing_angle:] = np.nan
-            lidar_shortest = np.nanmin(self.laser_range)
-        else:
-            lidar_shortest = 0
-        left_sum = np.sum(left)
-        right_sum = np.sum(right)
-        left_right_error = left_sum - right_sum
-        if left_right_error > TEMPTOLERANCE:
-            twist.angular.z = ROTATESLOW
-        elif left_right_error < -TEMPTOLERANCE:
-            twist.angular.z = -ROTATESLOW
-        elif lidar_shortest > SAFETYDISTANCE:
-            twist.linear.x = DELTASPEED
-        self.cmd_vel_publisher.publish(twist)
-        if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
-            return False
-        return True
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            if self.laser_range.size != 0:
+                laser_points = len(self.laser_range)
+                within_viewing_angle = math.ceil(VIEWANGLE/360 * laser_points)
+                self.laser_range[:laser_points - within_viewing_angle][within_viewing_angle:] = np.nan
+                lidar_shortest = np.nanmin(self.laser_range)
+            else:
+                lidar_shortest = 0
+            left_sum = np.sum(left)
+            right_sum = np.sum(right)
+            left_right_error = left_sum - right_sum
+            if left_right_error > TEMPTOLERANCE:
+                twist.angular.z = ROTATESLOW
+            elif left_right_error < -TEMPTOLERANCE:
+                twist.angular.z = -ROTATESLOW
+            elif lidar_shortest > SAFETYDISTANCE:
+                twist.linear.x = DELTASPEED
+            self.cmd_vel_publisher.publish(twist)
+            if (twist.linear.x == 0.0) and (twist.angular.z == 0.0):
+                return False
+            return True
     
     def smart_flip(self):
         left_lidar_half, right_lidar_half = np.hsplit(self.laser_range[len(self.laser_range)%2:], 2)
