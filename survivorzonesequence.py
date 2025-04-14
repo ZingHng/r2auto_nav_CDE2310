@@ -23,8 +23,8 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 from helper_funcs import fire_sequence, euler_from_quaternion
 
 DELTASPEED = 0.1
-ROTATESLOW = 0.2
-ROTATEFAST = 0.4
+ROTATESLOW = 0.15
+ROTATEFAST = 0.5
 SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
 TEMPTOLERANCE = 8 #Huat
@@ -32,7 +32,7 @@ FIRINGSAFETYZONESQ = 0.25
 VIEWANGLE = 45 # 0 +-ViewAngle
 DEBUG = True
 TAU = 2*math.pi
-OFFRAMPHEATSOURCES = 1
+OFFRAMPHEATSOURCES = 2
 
 try:
     max_temp = float(input("Max Temp? "))
@@ -152,6 +152,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         elif rad_angle < 0:  # CW
             twist.angular.z = -ROTATESLOW
         else:
+            twist.angular.z = 0
             print("No Rotation")
             return  # No rotation needed
         self.cmd_vel_publisher.publish(twist)
@@ -339,8 +340,6 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
 def main(args=None):
     rclpy.init(args=args)
     node_name = SurvivorZoneSequence()
-    node_name.move_away_from_wall()
-    print("DONE")
     node_name.survivorzones()
     node_name.rampcheck()
     node_name.rampclimb()
