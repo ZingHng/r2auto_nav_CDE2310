@@ -21,7 +21,7 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 
 from helper_funcs import fire_sequence, euler_from_quaternion
 
-DELTASPEED = 0.075
+DELTASPEED = 0.1
 ROTATESLOW = 0.1
 ROTATEFAST = 0.25
 SAFETYDISTANCE = 0.30
@@ -31,6 +31,7 @@ FIRINGSAFETYZONESQ = 0.25
 VIEWANGLE = 45 # 0 +-ViewAngle
 DEBUG = True
 TAU = 2*math.pi
+OFFRAMPHEATSOURCES = 1
 
 try:
     max_temp = float(input("Max Temp? "))
@@ -198,13 +199,19 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         twist.angular.z = 0.0
         self.cmd_vel_publisher.publish(twist)
 
-    def move_away_from_wall(self):
-        if len(self.laser_range) == 0:
+    def move_away_from_wall(self, safety):
+        while len(self.laser_range) == 0:
             rclpy.spin_once(self)
-        angle = np.nanargmin(self.laser_range)/len(self.laser_range) * TAU
-        angle = angle if angle < math.pi else angle - TAU
-        self.rotate(angle)
-        self.stop_bot()
+        while np.nanmin(self.laser_range) < safety:
+            angle = np.nanargmin(self.laser_range)/len(self.laser_range) * TAU
+            angle = angle if angle < math.pi else angle - TAU
+            self.rotate(angle)
+            twist = Twist()
+            twist.linear.x = -DELTASPEED
+            twist.angular.z = 0.0
+            self.cmd_vel_publisher.publish(twist)
+            time.sleep(0.3)
+            self.stop_bot()
         
 
     def survivorzones(self):
@@ -237,16 +244,30 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                     self.survivor_publisher.publish(survivor_msg)
     
     def rampcheck(self):
-        if len(self.activations) < 2: # theres 2 guys in end zone
-            found = False
-            while not found:
+        print("Ramp Check")
+        self.debugger()
+        if len(self.activations) < OFFRAMPHEATSOURCES: # theres 2 guys in end zone
+            print("Searching for other guy")
+            not_found = True
+            while not_found:
                 twist = Twist()
                 twist.linear.x = 0.0
                 twist.angular.z = np.sign(self.yaw) * ROTATESLOW
                 self.cmd_vel_publisher.publish(twist)
-                
-            
+                rclpy.spin_once(self)
+                pixels = np.array(sensor.pixels)
+                if np.max(pixels) > max_temp:
+                    self.stop_bot()
+                    left_heat_half, right_heat_half = np.hsplit(pixels, 2)
+                    not_found = self.approach_victim(left_heat_half, right_heat_half)
+                    if not not_found:
+                        self.stop_bot()
+                        fire_sequence()
+
+        self.move_away_from_wall(SAFETYDISTANCE)
+        
         rclpy.spin_once(self)
+
         if 1.55 < abs(self.yaw) < 1.59: # align to 90
             twist = Twist()
             twist.linear.x = 0.0
