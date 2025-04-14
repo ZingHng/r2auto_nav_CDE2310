@@ -86,7 +86,7 @@ class Ramp(Node):
         pass
 
     def looper(self):
-        while rclpy.ok() and :
+        while rclpy.ok():
             rclpy.spin_once(self) # timeout_sec=0.1 in case lidar doesnt work
             pixels = np.array(sensor.pixels)
             left_half, right_half = np.hsplit(pixels, 2)
