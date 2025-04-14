@@ -200,7 +200,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         twist.angular.z = 0.0
         self.cmd_vel_publisher.publish(twist)
 
-    def move_away_from_wall(self, safety):
+    def move_away_from_wall(self, safety=SAFETYDISTANCE):
         print("Move away from wall")
         while len(self.laser_range) == 0:
             rclpy.spin_once(self)
@@ -261,15 +261,14 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                 pixels = np.array(sensor.pixels)
                 self.debugger()
                 if np.max(pixels) > max_temp:
-                    print("Bot stopped")
-                    self.stop_bot()
                     left_heat_half, right_heat_half = np.hsplit(pixels, 2)
                     not_found = self.approach_victim(left_heat_half, right_heat_half)
                     if not not_found:
                         self.stop_bot()
+                        self.smart_flip()
                         fire_sequence()
         print("Move away from wall")
-        self.move_away_from_wall(SAFETYDISTANCE)
+        self.move_away_from_wall()
         
         rclpy.spin_once(self)
         print("Align Perpendicular")
@@ -338,6 +337,8 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
 def main(args=None):
     rclpy.init(args=args)
     node_name = SurvivorZoneSequence()
+    node_name.move_away_from_wall()
+    print("DONE")
     node_name.survivorzones()
     node_name.rampcheck()
     node_name.rampclimb()
