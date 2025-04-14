@@ -252,15 +252,16 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         if len(self.activations) < OFFRAMPHEATSOURCES: # theres 2 guys in end zone
             print("Searching for other guy")
             not_found = True
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = np.sign(self.yaw) * ROTATESLOW
+            self.cmd_vel_publisher.publish(twist)
             while not_found:
-                twist = Twist()
-                twist.linear.x = 0.0
-                twist.angular.z = np.sign(self.yaw) * ROTATESLOW
-                self.cmd_vel_publisher.publish(twist)
                 rclpy.spin_once(self)
                 pixels = np.array(sensor.pixels)
-                print(f"Not Found {np.max(pixels)}")
+                self.debugger()
                 if np.max(pixels) > max_temp:
+                    print("Bot stopped")
                     self.stop_bot()
                     left_heat_half, right_heat_half = np.hsplit(pixels, 2)
                     not_found = self.approach_victim(left_heat_half, right_heat_half)
