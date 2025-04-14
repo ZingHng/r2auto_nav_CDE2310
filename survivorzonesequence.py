@@ -263,11 +263,11 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                     if not not_found:
                         self.stop_bot()
                         fire_sequence()
-
+        print("Move away from wall")
         self.move_away_from_wall(SAFETYDISTANCE)
         
         rclpy.spin_once(self)
-
+        print("Align Perpendicular")
         if 1.55 < abs(self.yaw) < 1.59: # align to 90
             twist = Twist()
             twist.linear.x = 0.0
@@ -318,17 +318,17 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
 
 
     def rampclimb(self):
-        print("Ramp Climber")
         while rclpy.ok():
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
             self.debugger()
             left_half, right_half = np.hsplit(pixels, 2)
-            self.survivor_sequence = self.approach_victim(left_half, right_half)
-            if not self.survivor_sequence:
+            ended = self.approach_victim(left_half, right_half)
+            if not ended:
                 self.smart_flip()
                 self.stop_bot()
                 fire_sequence()
+                break
 
 def main(args=None):
     rclpy.init(args=args)
