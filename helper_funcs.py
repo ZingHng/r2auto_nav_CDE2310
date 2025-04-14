@@ -95,5 +95,4 @@ def fire_sequence():
         GPIO.cleanup()
 
 if __name__ == '__main__':
-    DEBUG = False
     fire_sequence()

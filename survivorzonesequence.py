@@ -8,6 +8,7 @@ import busio
 import board
 import rclpy
 from rclpy.node import Node
+from rclpy.duration import Duration
 
 from std_msgs.msg import Bool
 from sensor_msgs.msg import LaserScan, BatteryState
@@ -22,8 +23,8 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 from helper_funcs import fire_sequence, euler_from_quaternion
 
 DELTASPEED = 0.1
-ROTATESLOW = 0.1
-ROTATEFAST = 0.25
+ROTATESLOW = 0.2
+ROTATEFAST = 0.4
 SAFETYDISTANCE = 0.30
 TIMERPERIOD = 0.1
 TEMPTOLERANCE = 8 #Huat
@@ -100,10 +101,10 @@ class SurvivorZoneSequence(Node):
 
     def occ_callback(self, msg):
         try:
-            trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time())
+            trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time(), timeout = Duration(seconds=0.05))
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info('No transformation found')
-            return
+            return None
         self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
     def ramp_callback(self, msg):
