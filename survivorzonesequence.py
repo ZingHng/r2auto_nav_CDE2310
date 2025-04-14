@@ -238,6 +238,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                     self.smart_flip()
                     self.stop_bot()
                     fire_sequence()
+                    print("Post Fire Seq")
                     self.activations.append(self.position)
                     survivor_msg = Bool()
                     survivor_msg.data = False
