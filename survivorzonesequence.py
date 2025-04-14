@@ -201,6 +201,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         self.cmd_vel_publisher.publish(twist)
 
     def move_away_from_wall(self, safety):
+        print("Move away from wall")
         while len(self.laser_range) == 0:
             rclpy.spin_once(self)
         while np.nanmin(self.laser_range) < safety:
@@ -258,6 +259,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                 self.cmd_vel_publisher.publish(twist)
                 rclpy.spin_once(self)
                 pixels = np.array(sensor.pixels)
+                print(f"Not Found {np.max(pixels)}")
                 if np.max(pixels) > max_temp:
                     self.stop_bot()
                     left_heat_half, right_heat_half = np.hsplit(pixels, 2)
