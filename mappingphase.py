@@ -19,8 +19,9 @@ import time
 
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
-minimum_frontier_length = 5
-do_not_cross_line = -3 # about 3/-3? depends on direction
+minimum_frontier_length = 15
+do_not_cross_line = -3.4 # about 3/-3? depends on direction
+dp_after_dncline = (0.25, 3.2) # (y, x), but only x is used
 
 class Frontier(Node):
 
@@ -43,6 +44,10 @@ class Frontier(Node):
         self.frontiercells = np.array([]) # store the cells that may be part of frontiers
         self.frontierlist = np.array([]) # store groups of cells that form frontiers
         self.map_origin = None # store map origin to facilitate transformation of coordinates
+        self.map_res = 0
+        self.oldest_height = None
+        self.oldest_map_origin = None
+        self.dp_after_dncline_y = None
         
         # create pathfinderactive subscription, send new decisionpoint when pathfinderactive is false
         self.pathfinderactive_subscription = self.create_subscription(
@@ -61,13 +66,31 @@ class Frontier(Node):
             10)
         self.szsactive = False
 
+        # create mappingphaseactive subscription to check if can proceed with mappingphase
+        self.mappingphaseactive_subscription = self.create_subscription(
+            Bool,
+            'mappingphaseactive',
+            self.mappingphaseactive_callback,
+            10)
+        self.mappingphaseactive_subscription
+        self.mappingphaseactive = False # DEFAULT IS FALSE 
+
         # create decisionpoint publisher to send pathfinder new decision points
         self.dp_publisher_ = self.create_publisher(Point, 'decisionpoint', 10) # publishes new decision point for pathfinder node
         self.decisionpoint = None # (y, x) coordinates of next decision point 
 
+        '''
         # create mappingphaseactive publisher, stops searching phase from commencing
         self.mappingphaseactive_publisher_ = self.create_publisher(Bool, 'mappingphaseactive', 10) 
         self.mappingphaseactive = True
+        '''
+
+        # create targetlock publisher to tell pathfinder to turn on targetlock for final dp
+        self.targetlock_publisher_ = self.create_publisher(Bool, 'targetlock', 10)
+
+        # create rampsequence publisher to tell rampsequence to run
+        self.rampsequence_publisher_ = self.create_publisher(Bool, 'rampsequence', 10)
+        self.rampsequence = False
 
     def pathfinderactive_callback(self, msg):
         self.makingdecision = not (msg.data)
@@ -94,11 +117,17 @@ class Frontier(Node):
             self.get_logger().info('No transformation found')
             return    
         cur_pos = trans.transform.translation # real world coordinates of robot relative to robot start point
-
+        
+        old_map_origin = None
         if (self.map_origin is not None):
             old_map_origin = self.map_origin # save previous map origin to update decision point relative to new map later
         self.map_origin = msg.info.origin.position # real world coordinates of the origin of map from /map topic relative to robot start point
+        if self.oldest_map_origin is None:
+            self.oldest_map_origin = self.map_origin
+        if self.oldest_height is None:
+            self.oldest_height = msg.info.height
         map_res = msg.info.resolution # get map resolution
+        self.map_res = map_res
         if (cur_pos is not None):
             self.grid_x = round((cur_pos.x - self.map_origin.x) / map_res) # x position of robot on map from /map topic
             self.grid_y = round(((cur_pos.y - self.map_origin.y) / map_res)) # y posiiton of robot on map from /map topic
@@ -109,13 +138,16 @@ class Frontier(Node):
             print(f"transformed self.decisionpoint: {self.decisionpoint}")
 
         # draw do not cross line as wall so that robot does not see ramp as frontier
-        if msg.info.height > round(do_not_cross_line / map_res):
+        if msg.info.height > round(abs(do_not_cross_line / map_res)):
             if do_not_cross_line < 0:
-                start_row = abs(round(do_not_cross_line / map_res))
+                start_row = (msg.info.height - self.oldest_height) - round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res)) 
+                self.dp_after_dncline_y = msg.info.height - start_row - 25 # 25 grids before line
+                #print(start_row)
                 for row in range(0, msg.info.height - start_row):
                     self.odata[row] = [3] * msg.info.width
             if do_not_cross_line > 0:
-                start_row = round(do_not_cross_line / map_res)
+                start_row = round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res))
+                self.dp_after_dncline_y = start_row + 25 # 25 grids before line
                 for row in range(start_row, msg.info.height):
                     self.odata[row] = [3] * msg.info.width
 
@@ -140,6 +172,12 @@ class Frontier(Node):
             print('SURVIVOR ZONE SEQUENCE ACTIVE')
         else:
             print('SURVIVOR ZONE SEQUENCE COMPLETE')
+
+    def mappingphaseactive_callback(self, msg):
+        self.mappingphaseactive = msg.data
+        if self.mappingphaseactive is False:
+            print('MAPPINGPHASEACTIVE START')
+            self.decisionpointselect()
 
     def frontiersearch(self):        
         # 8 directions of neighbours
@@ -181,6 +219,33 @@ class Frontier(Node):
                 dfs(cell, visited, group)
                 if (len(group)>minimum_frontier_length):
                     self.frontierlist.append(group)
+        
+        # filter out stray frontiers from broken walls
+        # Helper function to check Euclidean distance between two points
+        def is_within_range(p1, p2, max_dist=5):
+            return math.hypot(p1[0] - p2[0], p1[1] - p2[1]) <= max_dist
+        # Collect endpoints of all frontiers
+        endpoints = []
+        for frontier in self.frontierlist:
+            if len(frontier) >= 2:
+                endpoints.append((frontier[0], frontier[-1]))  # start and end points
+            else:
+                endpoints.append((frontier[0], frontier[0]))  # same point repeated
+        # Mark which frontiers should be removed
+        remove_indices = set()
+        for i in range(len(endpoints)):
+            for j in range(i + 1, len(endpoints)):
+                ends_i = endpoints[i]
+                ends_j = endpoints[j]
+                # Check all combinations of endpoints between two frontiers
+                for p1 in ends_i:
+                    for p2 in ends_j:
+                        if is_within_range(p1, p2, max_dist=minimum_frontier_length):
+                            remove_indices.add(i)
+                            remove_indices.add(j)
+        # Remove frontiers that are too close at the ends
+        self.frontierlist = [f for idx, f in enumerate(self.frontierlist) if idx not in remove_indices]
+        
         # to see frontier list
         frontierlist_as_strings = [str(row) for row in self.frontierlist]
         np.savetxt('frontierlist.txt', frontierlist_as_strings, fmt='%s')
@@ -215,13 +280,9 @@ class Frontier(Node):
                 min_distance = dist
                 closest_coordinate = coord
         # if there are no moore decisionpoints, then mappingphase is complete
-        if (self.decisionpoint is not None) and (closest_coordinate is None):
+        if (closest_coordinate is None):
             self.mappingphaseactive = False
-            msg = Bool()
-            msg.data = self.mappingphaseactive
-            self.mappingphaseactive_publisher_.publish(msg)
-            time.sleep(5)
-            
+            print('MAPPINGPHASE COMPLETED')            
         
         self.decisionpoint = closest_coordinate
         
@@ -232,8 +293,25 @@ class Frontier(Node):
             point.x = float(round(self.decisionpoint[1]))
             self.dp_publisher_.publish(point) # publish new dp for pathplanner
             print(f"self.decisionpoint: {self.decisionpoint}")
-            
-
+        
+    def pastdncline(self):
+        while True:
+            rclpy.spin_once(self) 
+            if self.map_res != 0:
+                break
+        y, x = dp_after_dncline
+        self.decisionpoint = (self.dp_after_dncline_y, round(x / self.map_res))
+        self.makingdecision = False
+        print(f'Decisionpoint: {self.decisionpoint}')
+        msg = Bool()
+        msg.data = True
+        self.targetlock_publisher_.publish(msg)
+        time.sleep(1)
+        point = Point()
+        point.y = float(round(self.decisionpoint[0]))
+        point.x = float(round(self.decisionpoint[1]))
+        self.dp_publisher_.publish(point) # publish new dp for pathplanner
+        print(f"MOVING TO FINAL WAYPOINT {self.decisionpoint}")
 
 def main(args=None):
     rclpy.init(args=args)
@@ -243,20 +321,37 @@ def main(args=None):
     plt.ion()
     plt.show()    
 
+    mappingphasestarted = False
     while True:
         rclpy.spin_once(frontier)
-        if (frontier.makingdecision) and (frontier.mappingphaseactive) and (frontier.grid_x is not None) and (frontier.grid_y is not None):
-            frontier.frontiersearch()
-            frontier.frontierselect()
-
-        # freeze pathfinder while szsactive
-        while frontier.szsactive:
+        while frontier.mappingphaseactive:
+            mappingphasestarted = True
             rclpy.spin_once(frontier)
-            print('stuck in szs')
+            if (frontier.makingdecision) and (frontier.mappingphaseactive) and (frontier.grid_x is not None) and (frontier.grid_y is not None):
+                    frontier.frontiersearch()
+                    frontier.frontierselect()
+            
+            '''
+            # freeze pathfinder while szsactive
+            while frontier.szsactive:
+                rclpy.spin_once(frontier)
+                print('stuck in szs')
+            '''
 
-        if (not frontier.mappingphaseactive):
+            if not frontier.mappingphaseactive:
+                break
+        if mappingphasestarted:
             break
 
+
+    frontier.pastdncline()
+    while frontier.makingdecision is not True:
+        rclpy.spin_once(frontier)
+    frontier.rampsequence = True
+    msg = Bool()
+    msg.data = frontier.rampsequence
+    frontier.rampsequence_publisher_.publish(msg)
+    time.sleep(5)
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
