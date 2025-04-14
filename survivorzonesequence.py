@@ -312,8 +312,6 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
 def main(args=None):
     rclpy.init(args=args)
     node_name = SurvivorZoneSequence()
-    node_name.rotate(1.57)
-    node_name.rotate(-1.57)
     node_name.survivorzones()
     node_name.rampcheck()
     node_name.rampclimb()
