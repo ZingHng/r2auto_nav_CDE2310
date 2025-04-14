@@ -123,7 +123,7 @@ class SurvivorZoneSequence(Node):
 {time.strftime("%H:%M:%S",time.localtime())}
 LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+TEMP     | target={max_temp}*C, max={np.max(sensor.pixels)}*C
 BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
 STORAGE  | nearestfire={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
@@ -133,7 +133,7 @@ STORAGE  | nearestfire={self.nearest_fire_sq}, survivor sequence?={self.survivor
             print(f"""\n\n\n\n\n\n
 {time.strftime("%H:%M:%S",time.localtime())}
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp}, max={np.max(sensor.pixels)}*C
+TEMP     | target={max_temp}*C, max={np.max(sensor.pixels)}*C
 BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
 STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
@@ -268,6 +268,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
                         self.stop_bot()
                         self.smart_flip()
                         fire_sequence()
+                max_temp -= 0.00001
         print("Move away from wall")
         self.move_away_from_wall()
         

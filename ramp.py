@@ -13,7 +13,6 @@ class CelebrationDance(Node):
     def __init__(self):
         super().__init__('celebration_dance')
         self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
-        time.sleep(1)
 
     def spin_in_place(self, duration, direction=1):
         twist = Twist()
