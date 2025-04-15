@@ -20,7 +20,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 import tf2_ros
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 
-def Reader(Node):
+class Reader(Node):
     def __init__(self):
         super().__init__('Reader')
         self.cmd_vel_publisher = self.create_publisher(Twist,'cmd_vel',10)
