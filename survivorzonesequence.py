@@ -226,14 +226,14 @@ class SurvivorZoneSequence(Node):
             rclpy.spin_once(self)
 
         print("Ramp Check")
-        if max_temp > 20: # theres 2 guys in end zone
-            print(f"Searching for other guy of temp {max_temp}")
+        if len(self.activations) < 2: # theres 1 guy other than ramp
+            print(f"Searching for other guy @ {max_temp}*C")
             not_found = True
             twist = Twist()
             twist.linear.x = 0.0
             twist.angular.z = np.sign(self.yaw) * ROTATESLOW
             self.cmd_vel_publisher.publish(twist)
-            while not_found:
+            while not_found and max_temp > 22:
                 rclpy.spin_once(self)
                 pixels = np.array(sensor.pixels)
                 if np.max(pixels) > max_temp:
@@ -246,49 +246,11 @@ class SurvivorZoneSequence(Node):
                 max_temp -= 0.00001
         print("Move away from wall")
         self.move_away_from_wall()
-        
-        rclpy.spin_once(self)
-        print("Align Perpendicular")
-        if 1.55 < abs(self.yaw) < 1.59: # align to 90
-            twist = Twist()
-            twist.linear.x = 0.0
-            twist.angular.z = -np.sign(self.yaw) * ROTATESLOW
-            self.cmd_vel_publisher.publish(twist)
-            while 1.55 < abs(self.yaw) < 1.59:
-                rclpy.spin_once(self)
-            self.stop_bot()
-        
-        if self.laser_range.size != 0:
-            rclpy.spin_once(self)
-        print("Wiggle")
-        laser_points = len(self.laser_range)
-        back_view = self.laser_range[laser_points//4: 3*laser_points//4].copy()
-        self.laser_range[laser_points//4: 3*laser_points//4] = np.nan
-        front_view = self.laser_range
-        side_to_side_error = np.nanmin(front_view) - np.nanmin(back_view)
-        if abs(side_to_side_error) > SAFETYDISTANCE:
-            twist = Twist()
-            twist.linear.x = -np.sign(side_to_side_error) * DELTASPEED
-            twist.angular.z = 0.0
-            self.cmd_vel_publisher.publish(twist)
-            while np.nanmin(front_view) > 0.4 and np.nanmin(back_view) > 0.4:
-                rclpy.spin_once(self)
-            self.stop_bot
-        else:
-            twist = Twist()
-            twist.linear.x = 0.0
-            twist.angular.z = np.sign(self.yaw) * ROTATESLOW
-            self.cmd_vel_publisher.publish(twist)
-            while 3.138 > abs(self.yaw):
-                rclpy.spin_once(self)
-                if np.nanmin(self.laser_range):
-                    continue
-            self.stop_bot()
 
         if 3.138 < abs(self.yaw): # align to math.pi (victim)
             twist = Twist()
             twist.linear.x = 0.0
-            twist.angular.z = -np.sign(self.yaw) * ROTATESLOW
+            twist.angular.z = np.sign(self.yaw) * ROTATESLOW
             self.cmd_vel_publisher.publish(twist)
             while 3.138 > abs(self.yaw):
                 rclpy.spin_once(self)
