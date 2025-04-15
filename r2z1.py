@@ -20,12 +20,25 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 import tf2_ros
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 
+def euler_from_quaternion(x, y, z, w):
+    t0 = +2.0 * (w * x + y * z)
+    t1 = +1.0 - 2.0 * (x * x + y * y)
+    roll_x = math.atan2(t0, t1)
+
+    t2 = +2.0 * (w * y - z * x)
+    t2 = +1.0 if t2 > +1.0 else t2
+    t2 = -1.0 if t2 < -1.0 else t2
+    pitch_y = math.asin(t2)
+
+    t3 = +2.0 * (w * z + x * y)
+    t4 = +1.0 - 2.0 * (y * y + z * z)
+    yaw_z = math.atan2(t3, t4)
+
+    return roll_x, pitch_y, yaw_z
+
 class Reader(Node):
     def __init__(self):
         super().__init__('Reader')
-        self.cmd_vel_publisher = self.create_publisher(Twist,'cmd_vel',10)
-        self.survivor_publisher = self.create_publisher(Bool, 'survivorzonesequenceactive', 10)
-        self.survivor_sequence = False
         self.scan_subscription = self.create_subscription(
             LaserScan,
             'scan',
@@ -102,18 +115,13 @@ class Reader(Node):
             print('SURVIVOR ZONE SEQUENCE COMPLETE')
     
     def debugger(self):
-        if len(self.laser_range):
-            closest_LIDAR_index = np.nanargmin(self.laser_range)
-            print(f"""\n\n\n\n\n\n
+        print(f"""\n\n\n\n\n\n
 {time.strftime("%H:%M:%S",time.localtime())}
-LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
 SZS      | survivor sequence={self.survivor_sequence}
 """)
-        else:
-            print("Lidar Failed")
 
     def looper(self):
         while True:
