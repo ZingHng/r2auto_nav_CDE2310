@@ -7,6 +7,8 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
+from rclpy.duration import Duration
+
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import LaserScan, BatteryState
 
@@ -17,8 +19,6 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 
 import tf2_ros
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
-
-from helper_funcs import fire_sequence, euler_from_quaternion
 
 def Reader(Node):
     def __init__(self):
@@ -113,14 +113,7 @@ POSITION | (x, y)=({self.position[0]}, {self.position[1]})
 SZS      | survivor sequence={self.survivor_sequence}
 """)
         else:
-            print(f"""\n\n\n\n\n\n
-{time.strftime("%H:%M:%S",time.localtime())}
-ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-BATTERY  | voltage={self.voltage}V percentage={self.battery}%
-POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
-         | activations={self.activations}
-""")
+            print("Lidar Failed")
 
     def looper(self):
         self.debugger()

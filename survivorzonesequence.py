@@ -193,7 +193,7 @@ class SurvivorZoneSequence(Node):
 
     def survivorzones(self):
         print("SurvivorZoneSequence")
-        while rclpy.ok() and not self.ramp_seq:
+        while rclpy.ok() and len(self.activations) < OFFRAMPHEATSOURCES:
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
             if not self.survivor_sequence and np.max(pixels) > max_temp:
@@ -221,9 +221,14 @@ class SurvivorZoneSequence(Node):
                     self.survivor_publisher.publish(survivor_msg)
     
     def rampcheck(self):
+        while not self.ramp_seq:
+            print(f"ramp_seq= {self.ramp_seq} sleep timeeee")
+            time.sleep(2)
+            rclpy.spin_once(self)
+
         print("Ramp Check")
-        if len(self.activations) < OFFRAMPHEATSOURCES and max_temp > 0: # theres 2 guys in end zone
-            print("Searching for other guy")
+        if max_temp > 20: # theres 2 guys in end zone
+            print(f"Searching for other guy of temp {max_temp}")
             not_found = True
             twist = Twist()
             twist.linear.x = 0.0
