@@ -55,7 +55,7 @@ class CelebrationDance(Node):
         GPIO.output(in1,GPIO.LOW)
         GPIO.output(in2,GPIO.LOW)
         p=GPIO.PWM(en,1000)
-        p.start(500)
+        p.start(100)
         
         fullstep_seq = [
             [1,0,0,1],
