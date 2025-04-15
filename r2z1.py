@@ -122,9 +122,11 @@ SZS      | survivor sequence={self.survivor_sequence}
 
 
 def main(args=None):
+    rclpy.init(args=args)
     node_name = Reader()
     node_name.looper()
     node_name.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':
