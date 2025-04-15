@@ -129,6 +129,7 @@ SZS      | survivor sequence={self.szsactive}""")
 
     def looper(self):
         while True:
+            rclpy.spin_once(self)
             self.debugger()
 
 
