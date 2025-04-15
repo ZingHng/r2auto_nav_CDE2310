@@ -116,7 +116,8 @@ SZS      | survivor sequence={self.survivor_sequence}
             print("Lidar Failed")
 
     def looper(self):
-        self.debugger()
+        while True:
+            self.debugger()
 
 
 
