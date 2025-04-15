@@ -84,14 +84,17 @@ class Reader(Node):
         self.szsactive = False
 
     def scan_callback(self, msg):
+        print("scan callback")
         self.laser_range = np.array(msg.ranges)
         self.laser_range[self.laser_range==0] = np.nan
 
     def odom_callback(self, msg):
+        print("odom callback")
         orientation_quat =  msg.pose.pose.orientation
         self.roll, self.pitch, self.yaw = euler_from_quaternion(orientation_quat.x, orientation_quat.y, orientation_quat.z, orientation_quat.w)
 
     def occ_callback(self, msg):
+        print("occ callback")
         try:
             trans = self.tfBuffer.lookup_transform('map', 'base_link', rclpy.time.Time(), timeout = Duration(seconds=0.05))
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
@@ -100,9 +103,11 @@ class Reader(Node):
         self.position = [trans.transform.translation.x, trans.transform.translation.y] # real world coordinates of robot relative to robot start point
     
     def ramp_callback(self, msg):
+        print("Ramp callback")
         self.ramp_seq = msg.data
 
     def battery_callback(self, msg):
+        print("batt callback")
         self.battery = round(msg.percentage, 2) if msg.percentage > 40 else f"__LOW_BATTERY__ {round(msg.percentage, 2)}"
         self.voltage = round(msg.voltage, 2)
 
@@ -120,8 +125,7 @@ class Reader(Node):
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-SZS      | survivor sequence={self.survivor_sequence}
-""")
+SZS      | survivor sequence={self.szsactive}""")
 
     def looper(self):
         while True:
