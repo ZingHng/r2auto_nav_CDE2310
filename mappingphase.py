@@ -19,9 +19,9 @@ import time
 
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
-minimum_frontier_length = 15
-do_not_cross_line = -3.4 # about 3/-3? depends on direction
-dp_after_dncline = (0.25, 3.2) # (y, x), but only x is used
+minimum_frontier_length = 10
+do_not_cross_line = -3.5 # about 3/-3? depends on direction and distance from start of map
+dp_after_dncline_x = 1 # depends on left or right or middle
 
 class Frontier(Node):
 
@@ -48,6 +48,7 @@ class Frontier(Node):
         self.oldest_height = None
         self.oldest_map_origin = None
         self.dp_after_dncline_y = None
+        self.dp_after_dncline_x = dp_after_dncline_x
         
         # create pathfinderactive subscription, send new decisionpoint when pathfinderactive is false
         self.pathfinderactive_subscription = self.create_subscription(
@@ -127,6 +128,7 @@ class Frontier(Node):
         if self.oldest_height is None:
             self.oldest_height = msg.info.height
         map_res = msg.info.resolution # get map resolution
+        #print(map_res)
         self.map_res = map_res
         if (cur_pos is not None):
             self.grid_x = round((cur_pos.x - self.map_origin.x) / map_res) # x position of robot on map from /map topic
@@ -137,21 +139,27 @@ class Frontier(Node):
             self.decisionpoint = (round(self.decisionpoint[0] + (old_map_origin.y - self.map_origin.y) / map_res), round(self.decisionpoint[1] + (old_map_origin.x - self.map_origin.x) / map_res))
             print(f"transformed self.decisionpoint: {self.decisionpoint}")
 
+        if (self.map_origin is not None) and (old_map_origin is not None) and (not old_map_origin == self.map_origin):
+            self.dp_after_dncline_x = (self.dp_after_dncline_x + (old_map_origin.x - self.map_origin.x))
+            print(self.dp_after_dncline_x)
+
         # draw do not cross line as wall so that robot does not see ramp as frontier
         if msg.info.height > round(abs(do_not_cross_line / map_res)):
             if do_not_cross_line < 0:
                 start_row = (msg.info.height - self.oldest_height) - round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res)) 
-                self.dp_after_dncline_y = msg.info.height - start_row - 25 # 25 grids before line
+                self.dp_after_dncline_y = msg.info.height - start_row - 10 # 10 grids before line
                 #print(start_row)
                 for row in range(0, msg.info.height - start_row):
                     self.odata[row] = [3] * msg.info.width
             if do_not_cross_line > 0:
                 start_row = round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res))
-                self.dp_after_dncline_y = start_row + 25 # 25 grids before line
+                self.dp_after_dncline_y = start_row + 10 # 10 grids before line
                 for row in range(start_row, msg.info.height):
                     self.odata[row] = [3] * msg.info.width
 
         self.odata[self.grid_y][self.grid_x] = 0 # set current robot location to 0 to see on the matplotlib
+        if (self.dp_after_dncline_y is not None) and msg.info.height >= self.dp_after_dncline_y and msg.info.width >= round(dp_after_dncline_x / self.map_res):
+            self.odata[self.dp_after_dncline_y][round(self.dp_after_dncline_x / self.map_res)] = 0
         if (self.decisionpoint is not None):
             self.odata[int(self.decisionpoint[0]), int(self.decisionpoint[1])] = 0 # set decision point location to 0 to see on the matplotlib
         img = Image.fromarray(self.odata) # create image from 2D array using PIL
@@ -299,8 +307,7 @@ class Frontier(Node):
             rclpy.spin_once(self) 
             if self.map_res != 0:
                 break
-        y, x = dp_after_dncline
-        self.decisionpoint = (self.dp_after_dncline_y, round(x / self.map_res))
+        self.decisionpoint = (self.dp_after_dncline_y, round(self.dp_after_dncline_x / self.map_res))
         self.makingdecision = False
         print(f'Decisionpoint: {self.decisionpoint}')
         msg = Bool()

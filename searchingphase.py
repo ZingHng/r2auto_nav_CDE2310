@@ -30,8 +30,8 @@ radius = 20 # los limit of heat sensor
 cone_angle = 15 # los limit of heat sensor
 minimum_cost = 1000 # minimum cost required for circle on costmap to be selected for next decisionpoint so that some obscure corner would not be selected
 searchingresolution = 10 # to speed up the searching of cells by searchingresolution^2
-do_not_cross_line = -3.4 # about 3/-3? depends on direction -3.2 is good
-survivors_before_dncline = 2 # number of survivors that need to be found before the dncline
+do_not_cross_line = -3.5 # about 3/-3? depends on direction and distance from start of map
+survivors_before_dncline = 0 # number of survivors that need to be found before the dncline
 
 
 
