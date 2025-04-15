@@ -125,7 +125,7 @@ class Reader(Node):
 ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
 BATTERY  | voltage={self.voltage}V percentage={self.battery}%
 POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-SZS      | survivor sequence={self.szsactive}""")
+SZS      | survivor sequence={self.szsactive}, ramp_seq={self.ramp_seq}""")
 
     def looper(self):
         while True:
