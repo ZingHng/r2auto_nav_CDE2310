@@ -20,8 +20,8 @@ import time
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
 minimum_frontier_length = 15
-do_not_cross_line = -3.4 # about 3/-3? depends on direction
-dp_after_dncline = (0.25, 3.2) # (y, x), but only x is used
+do_not_cross_line = 3.5 # about 3/-3? depends on direction
+dp_after_dncline = (0.25, 1) # (y, x), but only x is used
 
 class Frontier(Node):
 

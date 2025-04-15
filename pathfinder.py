@@ -35,7 +35,7 @@ stop_distance_from_obstacle_behind = 0.3 # distance from obstacle behind to acti
 waypoint_gap = 5 # number of grids between pure pursuit waypoints
 rotatechange = 0.4 # speed of rotation
 speedchange = 0.12 # speed of linear movement
-do_not_cross_line = -3.4 # about 3/-3? depends on direction
+do_not_cross_line = 3.5 # about 3/-3? depends on direction
 
 # global variables
 targetlock = False # whether the algorithm forces it's way to a certain decisionpoint or moves to next decisionpoint in the case of obstacles
