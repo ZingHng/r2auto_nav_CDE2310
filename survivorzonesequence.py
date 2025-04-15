@@ -114,32 +114,6 @@ class SurvivorZoneSequence(Node):
         self.battery = round(msg.percentage, 2) if msg.percentage > 40 else f"__LOW_BATTERY__ {round(msg.percentage, 2)}"
         self.voltage = round(msg.voltage, 2)
 
-    def debugger(self):
-        if not DEBUG:
-            return None
-        if len(self.laser_range):
-            closest_LIDAR_index = np.nanargmin(self.laser_range)
-            print(f"""\n\n\n\n\n\n
-{time.strftime("%H:%M:%S",time.localtime())}
-LIDAR    | closest={np.nanmin(self.laser_range)}m @ {closest_LIDAR_index} - {closest_LIDAR_index / len(self.laser_range) * 360 }*
-ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp}*C, max={np.max(sensor.pixels)}*C
-BATTERY  | voltage={self.voltage}V percentage={self.battery}%
-POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfire={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
-         | activations={self.activations}
-""")
-        else:
-            print(f"""\n\n\n\n\n\n
-{time.strftime("%H:%M:%S",time.localtime())}
-ODOM     | roll={self.roll}, pitch={self.pitch}, yaw={self.yaw}
-TEMP     | target={max_temp}*C, max={np.max(sensor.pixels)}*C
-BATTERY  | voltage={self.voltage}V percentage={self.battery}%
-POSITION | (x, y)=({self.position[0]}, {self.position[1]})
-STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.survivor_sequence}
-         | activations={self.activations}
-""")
-
     def rotate(self, rad_angle):  # rad_angle in radians, < 2π
         def normalize_angle(angle):
             return np.arctan2(np.sin(angle), np.cos(angle))  # [-π, π]
@@ -222,7 +196,6 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         while rclpy.ok() and not self.ramp_seq:
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
-            self.debugger()
             if not self.survivor_sequence and np.max(pixels) > max_temp:
                 x, y = self.position
                 self.nearest_fire_sq = min([(i[0] - x) ** 2 + (i[1] - y) ** 2 for i in self.activations]+[math.inf])
@@ -249,8 +222,7 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
     
     def rampcheck(self):
         print("Ramp Check")
-        self.debugger()
-        if len(self.activations) < OFFRAMPHEATSOURCES: # theres 2 guys in end zone
+        if len(self.activations) < OFFRAMPHEATSOURCES and max_temp > 0: # theres 2 guys in end zone
             print("Searching for other guy")
             not_found = True
             twist = Twist()
@@ -260,7 +232,6 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
             while not_found:
                 rclpy.spin_once(self)
                 pixels = np.array(sensor.pixels)
-                self.debugger()
                 if np.max(pixels) > max_temp:
                     left_heat_half, right_heat_half = np.hsplit(pixels, 2)
                     not_found = self.approach_victim(left_heat_half, right_heat_half)
@@ -329,7 +300,6 @@ STORAGE  | nearestfiresq={self.nearest_fire_sq}, survivor sequence?={self.surviv
         while rclpy.ok():
             rclpy.spin_once(self)
             pixels = np.array(sensor.pixels)
-            self.debugger()
             left_half, right_half = np.hsplit(pixels, 2)
             ended = self.approach_victim(left_half, right_half)
             if not ended:
