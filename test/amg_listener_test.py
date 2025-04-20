@@ -1,3 +1,8 @@
+# This code subscribes to the 'sensor' node and listens for AMG8833 sensor data published by amg_publisher_test.py
+# The temperature data from the sensor is visualised as a heatmap on the remote PC
+# This code should be run on the remote PC, with amg_publisher_test.py running simultaneously on the RPi
+
+
 import time
 import rclpy
 from rclpy.node import Node
@@ -19,7 +24,8 @@ class SensorSubscriber(Node):
         self.subscription  # prevent unused variable warning
 
     def listener_callback(self, msg):
-        #self.get_logger().info("receiving")
+        # self.get_logger().info("receiving") # for debugging
+        # convert the one-dimensional array to 8x8 array
         x = np.reshape(msg.data, (8, 8))
         print(x)
         plt.imshow(x, cmap='hot', interpolation='nearest') 

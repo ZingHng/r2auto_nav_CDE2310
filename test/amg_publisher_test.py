@@ -1,5 +1,10 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
+# Adapted from https://github.com/adafruit/Adafruit_CircuitPython_AMG88xx/blob/main/examples/amg88xx_rpi_thermal_cam.py
+
+# This code publishes sensor data from AMG8833 as a one-dimensional array of 64 entries
+# Data is published to a node named 'sensor'
+# This code should be run on the Raspberry Pi, with amg_listener_test.py running simultaneously on the remote PC
 
 """This example is for Raspberry Pi (Linux) only!
    It will not work on microcontrollers running CircuitPython!"""
@@ -22,14 +27,14 @@ import adafruit_amg88xx
 
 i2c_bus = busio.I2C(board.SCL, board.SDA)
 
-# low range of the sensor (this will be blue on the screen)
-MINTEMP = 26.0
 
-# high range of the sensor (this will be red on the screen)
-MAXTEMP = 32.0
+# MINTEMP = 26.0
+
+
+# MAXTEMP = 32.0
 
 # how many color values we can have
-COLORDEPTH = 1024
+# COLORDEPTH = 1024
 
 os.putenv("SDL_FBDEV", "/dev/fb1")
 
@@ -59,6 +64,7 @@ class SensorPublisher(Node):
     def timer_callback(self):
         msg = Float32MultiArray()
         pixels = np.array(sensor.pixels)
+        # convert 8x8 temperature reading array to list for publishing
         pixels = np.reshape(pixels, 64)
         msg.data = pixels.tolist()
         self.publisher_.publish(msg)

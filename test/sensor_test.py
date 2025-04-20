@@ -1,3 +1,6 @@
+# Run on RPi to test reading from AMG8833 sensor
+# Prints 8x8 array of temperature readings and maximum temperature of each array
+
 import time
 import adafruit_amg88xx
 import busio

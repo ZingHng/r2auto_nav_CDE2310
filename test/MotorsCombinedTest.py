@@ -1,3 +1,5 @@
+# Run this code on the RPi to continuously test firing sequence and function of stepper motor (feeder) and DC motors (flywheels)
+
 import time
 import RPi.GPIO as GPIO
 

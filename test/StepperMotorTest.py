@@ -1,3 +1,5 @@
+# Run on RPi to test stepper motor rotation to a specified input angle
+
 import time
 import RPi.GPIO as GPIO
 
