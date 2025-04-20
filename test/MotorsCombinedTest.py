@@ -9,7 +9,7 @@ in1 = 20
 in2 = 16
 # in3 = 16
 # in4 = 20
-en = 21
+en = 12
 #mospwm = 12
 
 #Stepper setup
