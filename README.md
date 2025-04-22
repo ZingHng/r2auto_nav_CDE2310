@@ -44,6 +44,7 @@ Our group's system functions as follows:
 See ![electronics_readme](Electronics/electronics_readme.md)
 
 ### Software
+See ![software_readme](software_readme.md)
 
 ## Testing documentation
 
