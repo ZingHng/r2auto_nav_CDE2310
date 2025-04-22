@@ -1,9 +1,11 @@
 # this node subscribes to /descisionpoint, /map and /odom topic and tries to navigate to decisionpoint
-# it creates an optimal path by overlaying an A* cost map on a wall proximity cost map and finding the path with the lowest total cost
+# it creates an optimal path by overlaying an A* cost map on a wall proximity cost map before finding the path with the lowest total cost
 # waypoints are created based on the optimal path and the bot tries to move from waypoint to waypoint
 # this node also subscribes to /scan topic and initiates obstacle avoidance if lidar detects an obstacle
+# if heat source is detected, /survivorzonesequenceactive True and pathfinder will be killed
 # targetlock True means the algorithm will keep forcing it's way to decisionpoint even after it detects and avoids obstacles
-# targetlock False means the algorithm will move on to new decisionpoint after it detects and avoids obstacles
+# targetlock False means the algorithm will move on to new decisionpoint if it detects and avoids obstacles
+# for this mission, targetlock True will only be for final decisionpoint past the do not cross line after searchingphase and mappingphase have been completed
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -35,9 +37,11 @@ stop_distance_from_obstacle_behind = 0.3 # distance from obstacle behind to acti
 waypoint_gap = 5 # number of grids between pure pursuit waypoints
 rotatechange = 0.4 # speed of rotation
 speedchange = 0.12 # speed of linear movement
-do_not_cross_line = -3.5 # about 3/-3? depends on direction
-
-# global variables
+# with ramp being the top of map:
+# do not cross line is estimated distance from bottom wall to ramp area in meters
+# if robot starts at bottom left of map, input as >0
+# if robot starts at bottom right of map, input as <0
+do_not_cross_line = -3.4
 targetlock = False # whether the algorithm forces it's way to a certain decisionpoint or moves to next decisionpoint in the case of obstacles
 
 
@@ -83,7 +87,7 @@ class AStar:
             for grid_x in range(self.cols): # Iterate through columns
                 self.overall_costmap[grid_y][grid_x] = self.astar_costmap[grid_y][grid_x] + self.wallprox_costmap[grid_y][grid_x]
         self.path, self.total_cost = self.dijkstra(self.overall_costmap, self.start, self.end)
-        self.print()
+        self.printpath()
         print(f"New Path: {self.path}")
         print(f"Total Cost: {self.total_cost}")
     
@@ -162,7 +166,7 @@ class AStar:
         return [], 0  # Return an empty path and 0 if no path is found
     
     # display the frozen figure of path plotted                          
-    def print(self):
+    def printpath(self):
         pathmap = self.grid
         pathmap[self.start[0]][self.start[1]] = 0
         for (y, x) in self.path:
@@ -202,10 +206,10 @@ class Pathfinder(Node):
         self.grid_x = None # x position of robot on map from /map topic
         self.grid_y = None # y position of robot on map from /map topic
         self.odata = np.array([]) # store the 2D aaray of map from /map topic
-        self.reacheddp = False
+        self.reacheddp = False # whether or not robot has reached decisionpoint
         self.map_origin = None # store map origin to facilitate transformation of coordinates
-        self.oldest_map_origin = None
-        self.oldest_height = None
+        self.oldest_map_origin = None # original map origin from /map topic
+        self.oldest_height = None # original map height from /map topic
         
         # create subscription to track orientation
         self.odom_subscription = self.create_subscription(
@@ -247,7 +251,7 @@ class Pathfinder(Node):
             10)
         self.targetlock = targetlock
 
-        # create pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
+        # create /pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
         self.pathfinderactive = False
         self.waypoints = None
@@ -255,7 +259,8 @@ class Pathfinder(Node):
         # create cmd_vel publisher for moving TurtleBot
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
         
-        self.dpdone = False
+        # miscellaneous variables
+        self.finaldp = False # if robot has reached final dp before initiating ramp sequence
 
     # to read decisionpoints
     def dp_callback(self, msg):
@@ -320,12 +325,11 @@ class Pathfinder(Node):
                 self.waypoints[index] = (new_y, new_x)
             print(f"Transformed Waypoints: {self.waypoints}")
 
-        # draw do not cross line as wall so that robot does not see ramp as frontier
+        # draw do not cross line as wall so that robot does not see ramp area as empty cells that can travelled through
         if not self.targetlock:
             if msg.info.height > round(abs(do_not_cross_line / map_res)):
                 if do_not_cross_line < 0:
                     start_row = (msg.info.height - self.oldest_height) - round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res)) 
-                    #print(start_row)
                     for row in range(0, msg.info.height - start_row):
                         self.odata[row] = [3] * msg.info.width
                 if do_not_cross_line > 0:
@@ -366,6 +370,10 @@ class Pathfinder(Node):
         # Decide which obstacle (if any) to act on
         self.obstacle = False
         self.avoidancemode = 0
+        # there is minimum distance for front (225-135 degrees) and back (135-225 degrees)
+        # avoidancemode 1 is move forward from obstacle behind if minimum distance from obstacle behind is less than stop_distance_from_obstacle_behind
+        # avoidancemode 2 is reverse from obstacle in front if minimum distance from obstacle in front is less than stop_distance_from_obstacle
+        # avoidancemode 3 is reverse from obstacle in front if minimum distance from obstacle behind is less than stop_distance_from_obstacle_behind but minimum distance in front is less than minimum distance behind
 
         if min_back < stop_distance_from_obstacle_behind and min_front > min_back and (self.avoidancemode != 3):
             truelr2i = round(back_idx / total_len * 360)
@@ -405,7 +413,6 @@ class Pathfinder(Node):
             truelr2i = round(lr2i/len(self.laser_range)*360)        
             # if closest point is less than stop distance, initiate obstacle avoidance sequence and set obstacle to true to break while loops in purepursuit/rotatebot
             if self.laser_range[lr2i] < stop_distance_from_obstacle_behind:
-                # print('OBSTACLE DETECTED')
                 # convert lr2i to real world angle
                 rot_angle = truelr2i + math.degrees(self.yaw)
                 rot_angle = rot_angle % 360
@@ -506,10 +513,8 @@ class Pathfinder(Node):
                 rclpy.spin_once(self)
             # if robot detects obstacle, reacheddp, or szsactive, exit pure pursuit
                 if self.obstacle is True or self.reacheddp or self.szsactive:
-                    print('break 1')
                     break
             if self.obstacle is True or self.reacheddp or self.szsactive:
-                print('break 2')
                 break
         # stop robot before ending pure pursuit
         twist = Twist()
@@ -572,7 +577,7 @@ class Pathfinder(Node):
             self.waypoints = []
             # reacheddp is True when either within dp distance or no more waypoints
             if self.reacheddp:
-                print('killpathfinder1')
+                print('killpathfinder (targetlock)')
                 self.pathfinderactive = False
                 msg = Bool()
                 msg.data = self.pathfinderactive
@@ -580,13 +585,13 @@ class Pathfinder(Node):
                 self.reacheddp = False # reset reacheddp since exiting pathfinder
                 self.decisionpoint = None
                 if self.targetlock:
-                    self.dpdone = True
+                    self.finaldp = True
             else: 
                 print('recalibrating path')
         # non targetlock mode    
         else:
             self.waypoints = []
-            print('killpathfinder2')
+            print('killpathfinder (non targetlock)')
             self.pathfinderactive = False
             msg = Bool()
             msg.data = self.pathfinderactive
@@ -594,11 +599,11 @@ class Pathfinder(Node):
             self.reacheddp = False # reset reacheddp since exiting pathfinder
             self.decisionpoint = None
             if self.targetlock:
-                    self.dpdone = True
+                    self.finaldp = True
 
-    # stop the robot immediately, rotate robot towards closest point and reverse away slightly
+    # stop the robot immediately, rotate robot towards/away from closest obstacle and reverse away/move forward slightly
     def obstacleavoidance(self):
-        print(f"obstacle avoidance: {self.avoidancemode}")
+        print(f"Obstacle avoidance: {self.avoidancemode}")
         twist = Twist()
         twist = Twist()
         twist.linear.x = 0.0
@@ -613,7 +618,7 @@ class Pathfinder(Node):
                 print('backface')
                 while True:
                     print('moving forward from obstacle')
-                    twist.linear.x = speedchange # reverse away from closest point slightly
+                    twist.linear.x = speedchange # moving forward from closest point slightly
                     self.publisher_.publish(twist)
                     time.sleep(0.1)
                     twist.linear.x = 0.0 # stop robot
@@ -643,9 +648,12 @@ class Pathfinder(Node):
                 break
         self.avoidancemode = 0
 
+
+
 def main(args=None): 
     rclpy.init(args=args)
     pathfinder = Pathfinder()
+    
     # create matplotlib figure
     plt.ion()
     plt.show()
@@ -666,7 +674,7 @@ def main(args=None):
             rclpy.spin_once(pathfinder)
             print('stuck in szs')
         
-        if pathfinder.dpdone:
+        if pathfinder.finaldp:
             break
                 
     # Destroy the node explicitly
@@ -674,6 +682,8 @@ def main(args=None):
     # when the garbage collector destroys the node object)
     pathfinder.destroy_node()
     rclpy.shutdown()
+
+
 
 if __name__ == '__main__':
     main()

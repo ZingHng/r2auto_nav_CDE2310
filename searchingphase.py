@@ -1,3 +1,9 @@
+# this node subscribes to /map topic, /odom topic to create a costmap of areas that the frontfacing heat sensor has seen before
+# this node will cause the robot to rotate 360 degrees at each decisionpoint before choosing a new decisionpoint based on areas with lowest cost on costmap
+# decisionpoint will be published to /decisionpoint, pathfinder node will then navigate robot to the new decisionpoint
+# at each decisionpoint before spinning 360, robot will check /scan topic and initiate obstacle avoidance if lidar detects that it is unable to make 360 spin
+# if heat source is detected, /survivorzonesequenceactive True and searchingphase processes will stop temporarily
+# this node will also publish /mappingphaseactive True when searchingphase is completed so that mappingphase node will know to become active
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -21,18 +27,20 @@ import time
 
 # constants
 occ_bins = [-1, 0, 50, 100] # -1: unknown cell, 0-50: empty cells, 51-100: wall cells
-#stop_distance_from_obstacle = 0.18 # distance to obstacle to activate obstacleavoidance, 0.18 good for turtlebot only
-stop_distance_from_obstacle_behind = 0.3 # distance from obstacle behind to activate obstacleavoidance. this is to check if it's ok to spin default 0.3
-emer_escape_distance = 0.5
+stop_distance_from_obstacle = 0.3 # distance from obstacle activate obstacleavoidance. this is to check if it's ok to spin
+emer_escape_distance = 0.5 # minimum obstacle distance for emergency escape
 rotatechange = 0.4 # speed of rotation
 speedchange = 0.12 # speed of linear movement
 radius = 20 # los limit of heat sensor
 cone_angle = 15 # los limit of heat sensor
 minimum_cost = 1000 # minimum cost required for circle on costmap to be selected for next decisionpoint so that some obscure corner would not be selected
 searchingresolution = 10 # to speed up the searching of cells by searchingresolution^2
-do_not_cross_line = -3.5 # about 3/-3? depends on direction and distance from start of map
-survivors_before_dncline = 0 # number of survivors that need to be found before the dncline
-
+# with ramp being the top of map:
+# do not cross line is estimated distance from bottom wall to ramp area in meters
+# if robot starts at bottom left of map, input as >0
+# if robot starts at bottom right of map, input as <0
+do_not_cross_line = -3.4
+survivors_before_dncline = 2 # number of survivors that need to be found before the dncline
 
 
 
@@ -57,8 +65,6 @@ def euler_from_quaternion(x, y, z, w):
     yaw_z = math.atan2(t3, t4)
 
     return roll_x, pitch_y, yaw_z # in radians
-
-
 
 # Check if there is a clear line of sight between two coordinates using Bresenham's line algorithm
 def is_clear_line_of_sight(odata, y1, x1, y2, x2):
@@ -112,9 +118,6 @@ def increment_los_in_angle_range(odata, y, x, input_angle, radius, cone_angle):
                             if is_clear_line_of_sight(odata, y, x, ny, nx):
                                 odata[ny][nx] += 5  # increment to denote how many times sensor has seen it
                                 
-
-
-
 def transform_costmap(costmap, shift_x=0, shift_y=0):
     """
     Transform the given 2D costmap by shifting in the x and y directions.
@@ -182,6 +185,7 @@ def transform_costmap_back(costmap, shift_x=0, shift_y=0):
     
     return transformed_costmap
 
+# find largest arc in laser_range where distance from obstacle is at least emer_escape_distance
 def find_largest_valid_gap_center(laser_range):
     laser_range = np.array(laser_range)
     n = len(laser_range)
@@ -222,6 +226,9 @@ def find_largest_valid_gap_center(laser_range):
 
     return angle
 
+
+
+
 class Searchingphase(Node):
     def __init__(self):
         super().__init__('searchingphase')
@@ -245,9 +252,9 @@ class Searchingphase(Node):
         [0, 0],
         [0, 0]
         ]) 
-        self.map_res = 0
-        self.oldest_map_origin = None
-        self.oldest_height = None
+        self.map_res = 0 # map resolution from /map topic
+        self.oldest_map_origin = None # original map origin from /map topic
+        self.oldest_height = None # original map height from /map topic
         
         # create subscription to track orientation
         self.odom_subscription = self.create_subscription(
@@ -281,18 +288,7 @@ class Searchingphase(Node):
             self.pathfinderactive_callback,
             10)
         self.pathfinderactive_subscription
-        self.makingdecision = True # whether robot is at decision point DEFAULT IS FALSE swap now
-
-        '''
-        # create mappingphaseactive subscription to check if can proceed with mappingphase
-        self.mappingphaseactive_subscription = self.create_subscription(
-            Bool,
-            'mappingphaseactive',
-            self.mappingphaseactive_callback,
-            10)
-        self.mappingphaseactive_subscription
-        self.mappingphaseactive = False # DEFAULT IS TRUE swap now
-        '''
+        self.makingdecision = True # whether robot is at decision point
 
         # create subscription to survivorzonesequence
         self.szs_subscription = self.create_subscription(
@@ -307,27 +303,27 @@ class Searchingphase(Node):
         
         # create decisionpoint publisher to send pathfinder new decision points
         self.dp_publisher_ = self.create_publisher(Point, 'decisionpoint', 10) # publishes new decision point for pathfinder node
-        self.decisionpoint = None # (y, x) coordinates of next decision point       
-
-        
-        self.survivorsfound = 0
+        self.decisionpoint = None # (y, x) coordinates of next decision point
 
         # create mappingphaseactive publisher, stops searching phase from commencing
         self.mappingphaseactive_publisher_ = self.create_publisher(Bool, 'mappingphaseactive', 10) 
         self.mappingphaseactive = False
 
+        # miscellaneous variables
+        self.survivorsfound = 0 # searchingphase node will close when survivorsfound == survivors_before_dncline
+        
     def occ_callback(self, msg):
         occdata = np.array(msg.data) # create numpy array
         # compute histogram to identify bins with -1, values between 0 and below 50, 
         # and values between 50 and 100. The binned_statistic function will also
         # return the bin numbers so we can use that easily to create the image 
-        occ_counts, edges, binnum = scipy.stats.binned_statistic(occdata, np.nan, statistic='count', bins=occ_bins) #tbh idk why there are 3 variables so imma just leave it
+        occ_counts, edges, binnum = scipy.stats.binned_statistic(occdata, np.nan, statistic='count', bins=occ_bins)
 
         # binnum go from 1 to 3 so we can use uint8
         # convert into 2D array using column order
         self.odata = np.uint8(binnum.reshape(msg.info.height,msg.info.width))
 
-        # change odata such that it only cares about empty spaces
+        # change odata such that it only cares about empty spaces, ignores walls or unknown spaces
         self.odata[self.odata == 1] = 0
         self.odata[self.odata == 2] = 1
         self.odata[self.odata == 3] = 0
@@ -363,19 +359,17 @@ class Searchingphase(Node):
             shift_x = round((old_map_origin.x - self.map_origin.x) / map_res)
             shift_y = round((old_map_origin.y - self.map_origin.y) / map_res)
             self.costmap = transform_costmap(self.costmap, shift_x, shift_y)
-            print('Transformed costmap 1')
-
+            print('Costmap transformed due to origin shift')
         if (len(self.odata[0]) != len(self.costmap[0])) or (len(self.odata) != len(self.costmap)):
             shift_x = len(self.odata[0]) - len(self.costmap[0])
             shift_y = len(self.odata) - len(self.costmap)
             self.costmap = transform_costmap_back(self.costmap, shift_x, shift_y)
-            print('Transformed costmap 2')      
+            print('Costmap transformed due to map expand')      
 
-        # draw do not cross line as wall so that robot does not see ramp as frontier
+        # draw do not cross line as wall so that robot does not see ramp area as empty cells that can be selected as decisionpoints
         if msg.info.height > round(abs(do_not_cross_line / map_res)):
             if do_not_cross_line < 0:
                 start_row = (msg.info.height - self.oldest_height) - round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res)) 
-                #print(start_row)
                 for row in range(0, msg.info.height - start_row):
                     self.odata[row] = [3] * msg.info.width
             if do_not_cross_line > 0:
@@ -383,7 +377,7 @@ class Searchingphase(Node):
                 for row in range(start_row, msg.info.height):
                     self.odata[row] = [3] * msg.info.width
 
-        # Update the costmap to include new empty grids
+        # Update the costmap to include new empty grids not already in odata
         if (len(self.odata[0]) == len(self.costmap[0])) and (len(self.odata) == len(self.costmap)):
             self.costmap[(self.odata == 1) & (self.costmap == 0)] = 1
 
@@ -412,31 +406,21 @@ class Searchingphase(Node):
         self.laser_range = np.array(msg.ranges) # create numpy array of laser scans
         self.laser_range[self.laser_range==0] = np.nan # replace 0's with nan
         lr2i = np.nanargmin(self.laser_range)
-        truelr2i = round(lr2i/len(self.laser_range)*360)        
-        # if closest point is less than stop distance, initiate obstacle avoidance sequence and set obstacle to true to break while loops in purepursuit/rotatebot
-        if self.laser_range[lr2i] < stop_distance_from_obstacle_behind:
-            # print('OBSTACLE DETECTED')
+        truelr2i = round(lr2i/len(self.laser_range)*360)  
+        # if closest point is less than stop distance, set obstacle to true to initiate obstacle avoidance sequence
+        if self.laser_range[lr2i] < stop_distance_from_obstacle:
             # convert lr2i to real world angle
             rot_angle = truelr2i + math.degrees(self.yaw)
             rot_angle = rot_angle % 360
             # If the angle is greater than 180, subtract 360 to bring it to the range [-180, 180)
             if rot_angle > 180:
                 rot_angle -= 360
-            #print(f"Obstacle Angle: {rot_angle}")
             self.obstacle_angle = rot_angle
             self.obstacle = True
         else:
             self.obstacle = False
-            #print('no obstacles')
     
-    '''
-    def mappingphaseactive_callback(self, msg):
-        self.mappingphaseactive = msg.data
-        if self.mappingphaseactive is False:
-            print('MAPPINGPHASEACTIVE COMPLETE')
-            self.decisionpointselect()
-    '''
-
+    # after next decisionpoint is published, pathfinderactive becomes true and new decisionpoints will not be accepted by pathfinder node until the decisionpoint inputted has been reached
     def pathfinderactive_callback(self, msg):
         if self.mappingphaseactive is False:
             print(f'pathfinderactive: {msg.data}')
@@ -444,6 +428,7 @@ class Searchingphase(Node):
             if self.makingdecision:
                 print('DECISION POINT')
 
+    # if heat source is detected, kill all processes and hand control to survivorzonesequence
     def szs_callback(self, msg):
         self.szsactive = msg.data
         if self.szsactive:
@@ -454,14 +439,13 @@ class Searchingphase(Node):
 
     def fullrotation(self):
         # rotate the bot 360
-        print('360 rotation')
+        print('360 rotation started')
         yaw = self.yaw
         twist = Twist()
         twist.linear.x = 0.0 # set linear speed to zero so the TurtleBot rotates on the spot
         twist.angular.z = rotatechange # set to rotate
         self.publisher_.publish(twist) # start rotation
-        time.sleep(5)
-        print('entering while loop')
+        time.sleep(5) # ensure robot doesn't immediately break out of while loop
         start_time = time.time()
         while True:
             rclpy.spin_once(self)
@@ -477,14 +461,13 @@ class Searchingphase(Node):
         self.publisher_.publish(twist) # stop rotation
         print('finished rotation')                          
 
-
     def decisionpointselect(self):
         def is_valid_coordinate(y, x, costmap):
-            """Check if the coordinates are within the bounds of the costmap."""
+            # Check if the coordinates are within the bounds of the costmap
             return 0 <= y < costmap.shape[0] and 0 <= x < costmap.shape[1]
 
         def get_circle_indices(y_center, x_center, radius, costmap):
-            """Get the indices of the points within a circle of a given radius."""
+            # Get the indices of the points within a circle of a given radius
             indices = []
             for y in range(y_center - radius, y_center + radius + 1):
                 for x in range(x_center - radius, x_center + radius + 1):
@@ -495,7 +478,7 @@ class Searchingphase(Node):
             return indices
 
         def is_visible(y1, x1, y2, x2, costmap):
-            """Determine if (y2, x2) is visible from (y1, x1), considering obstacles."""
+            # Determine if (y2, x2) is visible from (y1, x1), considering obstacles
             # Use Bresenham's line algorithm to check for visibility between two points
             dx = abs(x2 - x1)
             dy = abs(y2 - y1)
@@ -520,7 +503,7 @@ class Searchingphase(Node):
             return True
 
         def get_cost_of_circle(y_center, x_center, radius, costmap):
-            """Calculate the total cost of a circle around (y_center, x_center), accounting for visibility."""
+            # Calculate the total cost of a circle around (y_center, x_center), accounting for visibility
             indices = get_circle_indices(y_center, x_center, radius, costmap)
             total_cost = 0
             for (y, x) in indices:
@@ -561,12 +544,12 @@ class Searchingphase(Node):
                     if total_cost > minimum_cost:
                         best_candidates.append((total_cost, (y, x)))
 
-            # Sort by cost and take 5
+            # Sort by cost and take top 3
             best_candidates.sort(key=lambda item: item[0])
             print(best_candidates)
             top_candidates = best_candidates[:3]
             print(top_candidates)
-            # Find the one closest to the robot
+            # Find the one closest to the robot within top 3
             min_distance = float('inf')
             closest_coordinate = None
 
@@ -600,21 +583,26 @@ class Searchingphase(Node):
         start_time = time.time()
         while True:
             elapsed_time = time.time() - start_time
+            # if robot is trapped in a microadjustment loop for more than 25s, robot rotates towards the most open area and moves towards it for 1.3s
             if elapsed_time >= 25:
                 print('EMERGERNCY ESCAPE')
                 if find_largest_valid_gap_center(self.laser_range) is not None:
                     angle = (find_largest_valid_gap_center(self.laser_range) + math.degrees(self.yaw) + 180) % 360
-                self.rotatebot(float(angle))
-                print('EMERGENCY REVERSE')
-                twist.linear.x = -speedchange # reverse away from closest point slightly
-                self.publisher_.publish(twist)
-                time.sleep(1.5)
-                twist.linear.x = 0.0 # stop robot
-                self.publisher_.publish(twist)
-                time.sleep(0.1)
-                rclpy.spin_once(self)
+                if angle is not None:
+                    self.rotatebot(float(angle))
+                    print('EMERGENCY REVERSE')
+                    twist.linear.x = -speedchange # reverse away from closest point slightly
+                    self.publisher_.publish(twist)
+                    time.sleep(1.3)
+                    twist.linear.x = 0.0 # stop robot
+                    self.publisher_.publish(twist)
+                    time.sleep(0.1)
+                    rclpy.spin_once(self)
+                else:
+                    print('NO VALID ESCAPE')
             old_obstacle_angle = self.obstacle_angle
             self.rotatebot(float(self.obstacle_angle))
+            
             while True:
                 print('reversing from obstacle')
                 twist.linear.x = -speedchange # reverse away from closest point slightly
@@ -624,6 +612,7 @@ class Searchingphase(Node):
                 self.publisher_.publish(twist)
                 time.sleep(0.1)
                 rclpy.spin_once(self)
+                # stop moving if the closest obstacle is outside 15 degrees of the obstacle that initiated the while loop
                 if abs(old_obstacle_angle - self.obstacle_angle) > 15 or not self.obstacle or self.szsactive:
                     break
             if not self.obstacle or self.szsactive:
@@ -663,24 +652,7 @@ class Searchingphase(Node):
         twist.angular.z = 0.0
         self.publisher_.publish(twist)
 
-    '''
-    def pastdncline(self):
-        while True:
-            rclpy.spin_once(self) 
-            if self.map_res != 0:
-                break
-        x, y = dp_after_dncline
-        self.decisionpoint = (round(x / self.map_res), round((y + self.transformbuffer) / self.map_res))
-        self.makingdecision = False
-        print(f'Decisionpoint: {self.decisionpoint}')
-        msg = Bool()
-        msg.data = True
-        self.targetlock_publisher_.publish(msg)
-        point = Point()
-        point.y = float(round(self.decisionpoint[0]))
-        point.x = float(round(self.decisionpoint[1]))
-        self.dp_publisher_.publish(point) # publish new dp for pathplanner
-    '''
+    
 
 def main(args=None):
     rclpy.init(args=args)
@@ -690,26 +662,19 @@ def main(args=None):
     plt.ion()
     plt.show()    
     time.sleep(5)
+
     while True:
         rclpy.spin_once(searchingphase)
-        '''
-        if searchingphase.makingdecision and (searchingphase.survivorsfound == survivors_before_dncline):
-            searchingphase.pastdncline()
-            while searchingphase.makingdecision is not True:
-                rclpy.spin_once(searchingphase) 
-            searchingphase.rampsequence = True
-            msg = Bool()
-            msg.data = searchingphase.rampsequence
-            searchingphase.rampsequence_publisher_.publish(msg)
-        '''
+
+        # check if searchingphase is complete and mappingphase should commence
         if searchingphase.makingdecision and searchingphase.survivorsfound == survivors_before_dncline:
             searchingphase.mappingphaseactive = True
             msg = Bool()
             msg.data = searchingphase.mappingphaseactive
             searchingphase.mappingphaseactive_publisher_.publish(msg)
             time.sleep(5)
-            print('fart')
 
+        # sweep 360 then choose decisionpoint and send to pathfinder node
         elif searchingphase.makingdecision and len(searchingphase.laser_range)>0: 
             rclpy.spin_once(searchingphase)
             if searchingphase.obstacle:
@@ -732,6 +697,7 @@ def main(args=None):
     # when the garbage collector destroys the node object)
     searchingphase.destroy_node()
     rclpy.shutdown()
+
 
 
 if __name__ == '__main__':
