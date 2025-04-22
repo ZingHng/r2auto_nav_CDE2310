@@ -1,6 +1,6 @@
 # Electronics info
 ## Component selection
-For heat source detection, the AMG8833 sensor was used as it has a detection distance of up to 7 metres, allowing for the robot to identify heat sources from a sufficiently far distance without colliding with them. 
+For heat source detection, the AMG8833 sensor was used as it has a detection distance of up to 7 metres, allowing for the robot to identify heat sources from a sufficiently far distance without colliding with them. The AMG8833 interfaces with the Raspberry Pi using the I2C protocol
 
 For the launcher mechanism, two flywheels were required to launch the ball and a stepper motor was required to feed balls to the flywheels. We used a 28BYJ-48 stepper motor which was packaged with a breakout board containing a ULN2003 motor driver, which allowed us to supply up to 12V for power. We used size 130 brushed DC motors for the flywheels due to their high RPM. The flywheels are controlled via a L298N motor driver as it can provide up to 2A of current. PWM was used to control the speed of the flywheels.
 
