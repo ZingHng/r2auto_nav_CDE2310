@@ -13,10 +13,15 @@ For the launcher mechanism, two flywheels were required to launch the ball and a
 | Flywheel motors | 0.3 x 12 = 3.6 | 0.5 x 2 = 1 | 3.6     | Stall current is 0.5A. 30% duty cycle from RPi |
 | Stepper motor   | 12             | 0.5         | 6       |                                                |
 |  Total          |                |             | 17.67   |                                                |
+
 *assume negligible current consumption by ULN2003 and L298N motor drivers
 
 ### Estimated battery life
-The turtlebot is powered by a 11.1V 1800mAh Li-Po battery
-Battery energy = 11.1V x 1.8Ah = 19.98Wh
-Assuming approx. 15W average power use, since motors are only running during firing sequence
-Estimated battery life = 19.98Wh / 15W = 1.3h
+The turtlebot is powered by a 11.1V 1800mAh Li-Po battery\
+Battery energy = 11.1V x 1.8Ah = 19.98Wh\
+Assuming approx. 15W average power use, since motors are only running during firing sequence\
+Estimated battery life = 19.98Wh / 15W = 1.3h\
+
+
+## Wiring diagram
+![wiring diagram](wiring_diagram.png)
