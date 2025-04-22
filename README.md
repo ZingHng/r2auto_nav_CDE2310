@@ -6,6 +6,31 @@ The robot is required to autonomously navigate and fully map a maze. Upon detect
 
 The full final mission details can be found ![here](https://github.com/NickInSynchronicity/EG2310_AY2024-25/blob/main/docs/Mission%20Readme.md)
 
+## Repository structure
+```
+— README.md
+— Electronics
+—— electronics_readme
+— __pycache__
+— assets
+— .gitattributes
+— __init__.py
+— helper_funcs.py
+— pathfinder.py
+— mappingphase.py
+— searchingphase.py
+— survivorzonesequence.py
+— package.xml
+— dev_scripts
+—— r2z1.py # for debugging 
+—— ramp.py # ramp test script
+—— sensor_development # scripts to test heat sensor
+—— launcher_development # scripts used for development of launcher system
+—— board_integration # other test scripts
+— reference_scripts # Scripts used as reference, including original r2auto_nav scripts
+— tasks # in-class tasks and submissions
+```
+
 ## High-level design
 Our group's system functions as follows:
 ![system flowchart](assets/FinalSolution.png)
