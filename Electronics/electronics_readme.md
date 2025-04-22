@@ -6,6 +6,9 @@ For the launcher mechanism, two flywheels were required to launch the ball and a
 
 
 ## Power budget
+The Raspberry Pi is connected to 5V power from the OpenCR 1.0 board, and the motor drivers are connected to 12V power from the OpenCR. The OpenCR can provide a maximum of 55W. 
+
+
 | **Component**       | **Voltage/V**     | **Current/A**   | **Power/W** | **Remarks**                     |
 |-----------------|----------------|-------------|---------|------------------------------------------------|
 | Turtlebot       | 12             | 0.66        | 7.92    |                                                |
@@ -20,8 +23,9 @@ For the launcher mechanism, two flywheels were required to launch the ball and a
 The turtlebot is powered by a 11.1V 1800mAh Li-Po battery\
 Battery energy = 11.1V x 1.8Ah = 19.98Wh\
 Assuming approx. 15W average power use, since motors are only running during firing sequence\
-Estimated battery life = 19.98Wh / 15W = 1.3h\
+Estimated battery life = 19.98Wh / 15W = 1.3h
 
 
 ## Wiring diagram
 ![wiring diagram](wiring_diagram.png)
+
