@@ -1,3 +1,5 @@
+# run this on the RPi to check output of AMG8833 sensor
+
 import time
 import busio
 import board
