@@ -9,12 +9,13 @@ How to operate:
 - rosbu (rpi)
 - rslam (remote laptop)
 - python3 survivorzonesequence.py (rpi)
-- ros2 run auto_nav pathfinder
-- ros2 run auto_nav mappingphase
-- ros2 run auto_nav searchingphase
+- ros2 run auto_nav pathfinder (remote laptop)
+- ros2 run auto_nav mappingphase (remote laptop)
+- ros2 run auto_nav searchingphase (remote laptop)
 
 The nodes will interact with each other in the following mannaer:
 
+![RQT_Graph](Pictures/Pathfinder, Mappingphase, Searchingphase RQT Graph.png)
 
 ## Orientation of Robot
 WEEEEEEEEE
