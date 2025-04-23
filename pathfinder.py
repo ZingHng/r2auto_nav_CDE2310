@@ -1,6 +1,6 @@
 # this node subscribes to /descisionpoint, /map and /odom topic and tries to navigate to decisionpoint
 # it creates an optimal path by overlaying an A* cost map on a wall proximity cost map before finding the path with the lowest total cost
-# waypoints are created based on the optimal path and the bot tries to move from waypoint to waypoint
+# waypoints are created based on the optimal path and the robot tries to move from waypoint to waypoint
 # this node also subscribes to /scan topic and initiates obstacle avoidance if lidar detects an obstacle
 # if heat source is detected, /survivorzonesequenceactive True and pathfinder will be killed
 # targetlock True means the algorithm will keep forcing it's way to decisionpoint even after it detects and avoids obstacles

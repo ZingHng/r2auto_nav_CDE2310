@@ -30,7 +30,7 @@ min_dist_between_frontier_ends = 5 # minimum distance between frontier ends for 
 # if robot starts at bottom left of map, input as >0
 # if robot starts at bottom right of map, input as <0
 do_not_cross_line = -3.4
-dp_after_dncline_x = 2.8 # estimated x coordinate of final dp in meters
+finaldp_x = 2.8 # estimated x coordinate of final dp in meters
 
 
 
@@ -57,8 +57,8 @@ class Mappingphase(Node):
         self.map_res = 0 # map resolution from /map topic
         self.oldest_height = None # original map height from /map topic
         self.oldest_map_origin = None # original map origin from /map topic
-        self.dp_after_dncline_y = None # y position of final dp
-        self.dp_after_dncline_x = dp_after_dncline_x # x position of final dp
+        self.finaldp_y = None # y position of final dp
+        self.finaldp_x = finaldp_x # x position of final dp
         
         # create pathfinderactive subscription, send new decisionpoint when pathfinderactive is false
         self.pathfinderactive_subscription = self.create_subscription(
@@ -136,25 +136,25 @@ class Mappingphase(Node):
 
         # transform final dp if origin changes
         if (self.map_origin is not None) and (old_map_origin is not None) and (not old_map_origin == self.map_origin):
-            self.dp_after_dncline_x = (self.dp_after_dncline_x + (old_map_origin.x - self.map_origin.x))
+            self.finaldp_x = (self.finaldp_x + (old_map_origin.x - self.map_origin.x))
 
         # draw do not cross line as wall so that robot does not see ramp area as frontier that can be explored
         if msg.info.height > round(abs(do_not_cross_line / map_res)):
             if do_not_cross_line < 0:
                 start_row = (msg.info.height - self.oldest_height) - round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res)) 
-                self.dp_after_dncline_y = msg.info.height - start_row - 10 # 10 grids before line
+                self.finaldp_y = msg.info.height - start_row - 10 # 10 grids before line
                 for row in range(0, msg.info.height - start_row):
                     self.odata[row] = [3] * msg.info.width
             if do_not_cross_line > 0:
                 start_row = round((self.oldest_map_origin.y - self.map_origin.y)/map_res) + round(abs(do_not_cross_line / map_res))
-                self.dp_after_dncline_y = start_row + 10 # 10 grids before line
+                self.finaldp_y = start_row + 10 # 10 grids before line
                 for row in range(start_row, msg.info.height):
                     self.odata[row] = [3] * msg.info.width
 
         self.odata[self.grid_y][self.grid_x] = 0 # set current robot location to 0 to see on the matplotlib
         # set final dp location to 0 to see on the matplotlib
-        if (self.dp_after_dncline_y is not None) and msg.info.height >= self.dp_after_dncline_y and msg.info.width >= round(dp_after_dncline_x / self.map_res):
-            self.odata[self.dp_after_dncline_y][round(self.dp_after_dncline_x / self.map_res)] = 0
+        if (self.finaldp_y is not None) and msg.info.height >= self.finaldp_y and msg.info.width >= round(finaldp_x / self.map_res):
+            self.odata[self.finaldp_y][round(self.finaldp_x / self.map_res)] = 0
         # set decision point location to 0 to see on the matplotlib
         if (self.decisionpoint is not None):
             self.odata[int(self.decisionpoint[0]), int(self.decisionpoint[1])] = 0
@@ -293,7 +293,7 @@ class Mappingphase(Node):
             rclpy.spin_once(self) 
             if self.map_res != 0:
                 break
-        self.decisionpoint = (self.dp_after_dncline_y, round(self.dp_after_dncline_x / self.map_res))
+        self.decisionpoint = (self.finaldp_y, round(self.finaldp_x / self.map_res))
         self.makingdecision = False
         print(f'Decisionpoint: {self.decisionpoint}')
         msg = Bool()

@@ -16,8 +16,6 @@ How to operate:
 The main nodes will interact with each other in the following manner:
 ![RQT Graph 1](Pictures/RQTGraph1.png)
 
-insert szs RQT Graph here
-
 ## Map Parameters
 Taking the ramp area as the top of the map, the robot will start at the bottom left or bottom right of the map. 
 - If the robot starts at the bottom left, it must start facing rightwards
@@ -45,6 +43,7 @@ alias rosbu='ros2 launch turtlebot3_bringup robot.launch.py'
 alias rslam='ros2 launch turtlebot3_cartographer cartographer.launch.py'
 
 ## Survivor Zone Sequence Node
+This node subscribes to /odom to track its relative position to the origin of the map. The node runs on the RPi, processing sensor data every cycle. When a precalibrated temperature is detected, the node will broadcast on /survivorzonesequenceactive to freeze the Searching Phase, Mapping Phase and pathfinder nodes. The node then publishes movement to /cmd_vel to approach the heat source. When the lidar detects that it may be close to the target, the robot stops, rotates and spins up the flywheels to fire the flares.
 
 ## Searching Phase Node
 This node subscribes to /map and /odom to create a costmap of the areas that the front facing heat sensor has seen. The node will decide the next decision point to navigate to by finding the the area with the lowest cost. Whenever the robot reaches a decision point, it rotates 360 so that the front facing heat sensor can sweep the area before deciding on the subsequent decision point. Before spinning 360, robot will check /scan topic and initiate obstacle avoidance if lidar detects that it may collide with obstacles while spinning. Decision points are published to /decisionpoint for the pathfinder node to handle the navigation. If heat sources are detected, survivor zone sequence will become active and searching phase will freeze temporarily. After all the heat sources before the ramp area has been found, searching phase will end. The node will publish /mappingphaseactive as True and the node will close.
