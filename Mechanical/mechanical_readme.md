@@ -23,7 +23,7 @@ This launcher mechanism is attached to the robot using four M3 screws to two dif
 The sensor mount is attached to the turtlebot with two M3 screws. The sensor is attached to the mount with two M2 screws.
 
 ![sensor mount](Pictures/sensor_mount.png)
-![AMG8833 mounted]
+![AMG8833 mounted](/assets/bot_pic2.jpg)
 
 ## L298N Motor Driver Mount
 The L298N motor driver mount is attached to the turtlebot with two M3 screws. The motor driver is attached to the mount with four M2.5 screws. The long holes on the sides are for the pins on the back of the motor driver.
