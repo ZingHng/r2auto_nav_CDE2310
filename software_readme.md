@@ -5,7 +5,7 @@ How to operate:
 2. Ensure both rpi and remote laptop are connected to the same wifi
 3. SSH into the rpi
 4. Postion the robot with its heading parallel to bottom of the maze (see Map Parameters below)
-5. To run the program, run the following commands in seperate terminals the following order:
+5. To run the program, run the following commands in seperate terminals in the following order:
 - rosbu (rpi)
 - rslam (remote laptop)
 - python3 survivorzonesequence.py (rpi)
