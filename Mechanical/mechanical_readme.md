@@ -61,7 +61,7 @@ In order for the robot to traverse up the ramp, we thought to keep the centre of
 The calculations for the centre of gravity are shown in greater details [here](Centre_of_Gravity_Calculations.xlsx).
 
 ## Total Fasteners 
-All the fasteners used are listed in the table below. 
+All the fasteners used are listed in the tables below. 
 
 **Launching Mechanism**
 | Fastener            | Quantity |
