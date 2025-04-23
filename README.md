@@ -14,9 +14,9 @@ The full final mission details can be found ![here](https://github.com/NickInSyn
 — assets
 — .gitattributes
 — __init__.py
-— helper_funcs.py           # helper functions
+— helper_funcs.py           # helper functions to test robot functionality
 — pathfinder.py             # computes path for robot to travel to decision point 
-— mappingphase.py           # after both non-ramp heat sources are found, checks if maze is fully mapped
+— mappingphase.py           # after both non-ramp heat sources are found, ensures map closure is achieved
 — searchingphase.py         # publishes decision points for robot to navigate to
 — survivorzonesequence.py   # heat source detection and launcher firing
 — package.xml
