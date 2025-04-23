@@ -38,7 +38,7 @@ For the final decision point in mappingphase.py, only the x coordinate has to be
 alias rosbu='ros2 launch turtlebot3_bringup robot.launch.py'
 
 ### rslam
-'rslam' is an alias for 'ros2 launch turtlebot3_cartographer cartographer.launch.py'. To use 'rslam' command on remote laptop, add the following to the remote laptop's .basrhc:
+'rslam' is an alias for 'ros2 launch turtlebot3_cartographer cartographer.launch.py'. To use 'rslam' command on remote laptop, add the following to the remote laptop's .bashrc:
 
 alias rslam='ros2 launch turtlebot3_cartographer cartographer.launch.py'
 

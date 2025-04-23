@@ -9,23 +9,23 @@ The full final mission details can be found [here](https://github.com/NickInSync
 ## Repository structure overview
 
 - README.md
-- Electronics               # this folder contains information for the electronics (heat sensor and launcher mechanism)
-- Mechanical                # this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers
+- Electronics               _this folder contains information for the electronics (heat sensor and launcher mechanism)_
+- Mechanical                _this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers_
 - assets
-- helper_funcs.py           # helper functions to test robot functionality
-- pathfinder.py             # computes path for robot to travel to decision point 
-- mappingphase.py           # after both non-ramp heat sources are found, ensures map closure is achieved
-- searchingphase.py         # publishes decision points for robot to navigate to
-- survivorzonesequence.py   # heat source detection and launcher firing
+- helper_funcs.py           _helper functions to test robot functionality_
+- pathfinder.py             _computes path for robot to travel to decision point_
+- mappingphase.py           _after both non-ramp heat sources are found, ensures map closure is achieved_
+- searchingphase.py         _publishes decision points for robot to navigate to_
+- survivorzonesequence.py   _heat source detection and launcher firing_
 - package.xml
 - dev_scripts
-    - r2z1.py                  # for debugging 
-    - ramp.py                  # ramp test script
-    - sensor_development       # scripts to test heat sensor
-    - launcher_development     # scripts used for development of launcher system
-    - board_integration        # other test scripts
-- reference_scripts         # Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
-- tasks                     # in-class tasks and submissions
+    - r2z1.py                  _for debugging_
+    - ramp.py                  _ramp test script_
+    - sensor_development       _scripts used for development of heat source detection_
+    - launcher_development     _scripts used for development of launcher system_
+    - board_integration        _other test scripts_
+- reference_scripts         _Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)_
+- tasks                     _in-class tasks and submissions_
 
 
 ## High-level design
