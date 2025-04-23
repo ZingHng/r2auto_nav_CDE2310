@@ -9,18 +9,9 @@ The full final mission details can be found [here](https://github.com/NickInSync
 
 ## Repository structure overview
 
-- README.md
 - Electronics               _this folder contains information for the electronics (heat sensor and launcher mechanism)_
 - Mechanical                _this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers_
 - assets                    _this folder contains pictures and documents_
-- helper_funcs.py           _helper functions to test robot functionality_
-- pathfinder.py             _navigates the robot to subsequent decision points_
-- mappingphase.py           _ensures map closure is achieved after all non-ramp heat sources are found in searching phase_
-- searchingphase.py         _sweeps the map for heat sources_
-- survivorzonesequence.py   _heat source detection, launcher firing and ramp sequence_
-- package.xml               _contains package dependencies_
-- setup.py                  _creates entry points for the package_
-- software_readme.md        _this file contains information for the software_
 - dev_scripts
     - r2z1.py                  _for debugging_
     - ramp.py                  _ramp test script_
@@ -29,6 +20,15 @@ The full final mission details can be found [here](https://github.com/NickInSync
     - board_integration        _other test scripts_
 - reference_scripts         _Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)_
 - tasks                     _in-class tasks and submissions_
+- README.md
+- helper_funcs.py           _helper functions to test robot functionality_
+- mappingphase.py           _ensures map closure is achieved after all non-ramp heat sources are found in searching phase_
+- package.xml               _contains package dependencies_
+- pathfinder.py             _navigates the robot to subsequent decision points_
+- searchingphase.py         _sweeps the map for heat sources_
+- setup.py                  _creates entry points for the package_
+- software_readme.md        _this file contains information for the software_
+- survivorzonesequence.py   _heat source detection, launcher firing and ramp sequence_
 
 
 ## High-level design
