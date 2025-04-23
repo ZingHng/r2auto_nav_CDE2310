@@ -8,24 +8,24 @@ The full final mission details can be found [here](https://github.com/NickInSync
 
 ## Repository structure overview
 
-— README.md
-— Electronics               # this folder contains information for the electronics (heat sensor and launcher mechanism)
-— Mechanical                # this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers
-— assets
-— helper_funcs.py           # helper functions to test robot functionality
-— pathfinder.py             # computes path for robot to travel to decision point 
-— mappingphase.py           # after both non-ramp heat sources are found, ensures map closure is achieved
-— searchingphase.py         # publishes decision points for robot to navigate to
-— survivorzonesequence.py   # heat source detection and launcher firing
-— package.xml
-— dev_scripts
-—— r2z1.py                  # for debugging 
-—— ramp.py                  # ramp test script
-—— sensor_development       # scripts to test heat sensor
-—— launcher_development     # scripts used for development of launcher system
-—— board_integration        # other test scripts
-— reference_scripts         # Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
-— tasks                     # in-class tasks and submissions
+- README.md
+- Electronics               # this folder contains information for the electronics (heat sensor and launcher mechanism)
+- Mechanical                # this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers
+- assets
+- helper_funcs.py           # helper functions to test robot functionality
+- pathfinder.py             # computes path for robot to travel to decision point 
+- mappingphase.py           # after both non-ramp heat sources are found, ensures map closure is achieved
+- searchingphase.py         # publishes decision points for robot to navigate to
+- survivorzonesequence.py   # heat source detection and launcher firing
+- package.xml
+- dev_scripts
+    - r2z1.py                  # for debugging 
+    - ramp.py                  # ramp test script
+    - sensor_development       # scripts to test heat sensor
+    - launcher_development     # scripts used for development of launcher system
+    - board_integration        # other test scripts
+- reference_scripts         # Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
+- tasks                     # in-class tasks and submissions
 
 
 ## High-level design
