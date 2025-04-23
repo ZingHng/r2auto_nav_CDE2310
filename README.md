@@ -17,8 +17,9 @@ The full final mission details can be found [here](https://github.com/NickInSync
 - pathfinder.py             _computes path for robot to travel to decision point_
 - mappingphase.py           _after both non-ramp heat sources are found, ensures map closure is achieved_
 - searchingphase.py         _publishes decision points for robot to navigate to_
-- survivorzonesequence.py   _heat source detection and launcher firing_
-- package.xml
+- survivorzonesequence.py   _heat source detection, launcher firing and ramp sequence_
+- package.xml               _contains package dependencies_
+- setup.py                  _creates entry points for the package_
 - dev_scripts
     - r2z1.py                  _for debugging_
     - ramp.py                  _ramp test script_
