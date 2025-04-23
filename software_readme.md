@@ -13,19 +13,44 @@ How to operate:
 - ros2 run auto_nav mappingphase (remote laptop)
 - ros2 run auto_nav searchingphase (remote laptop)
 
-The nodes will interact with each other in the following mannaer:
+The main nodes will interact with each other in the following mannaer:
+![RQT Graph 1](Pictures/RQTGraph1.png)
 
-![RQT_Graph](Pictures/Pathfinder, Mappingphase, Searchingphase RQT Graph.png)
+insert szs RQT Graph here
 
-## Orientation of Robot
-WEEEEEEEEE
+## Map Parameters
+Taking the ramp area as the top of the map, the robot will start at the bottom left or bottom right of the map. 
+- If the robot starts at the bottom left, it must start facing rightwards
+- If the robot starts at the bottom right, it must start facing leftwards
+
+The do_not_cross_line distance is from the bottom wall to the ramp area and this variable must be updated in pathfinder.py, mappingphase.py and searchingphase.py. 
+- If robot starts at the bottom left of the map, input distance as positive number
+- If robot starts at bottom right of map, input distance as negative number
+
+For the final decision point in mappingphase.py, only the x coordinate has to be updated in the variable finaldp_x.
+- If robot starts at the bottom left, finaldp_x is the x distance from the left wall to the final decision point
+- If robot starts at the bottom right, finaldp_x is the x distance from the right wall to the final decision point
+
+![Example Map](Pictures/ExampleMap.png) 
 
 ## ROSBU and RSLAM
+### rosbu
+'rosbu' is an alias for 'ros2 launch turtlebot3_bringup robot.launch.py'. To use 'rosbu' command on rpi, add the following to the rpi's .bashrc:
+
+alias rosbu='ros2 launch turtlebot3_bringup robot.launch.py'
+
+### rslam
+'rslam' is an alias for 'ros2 launch turtlebot3_cartographer cartographer.launch.py'. To use 'rslam' command on remote laptop, add the following to the remote laptop's .basrhc:
+
+alias rslam='ros2 launch turtlebot3_cartographer cartographer.launch.py'
 
 ## Survivor Zone Sequence
 
 ## Searching Phase
+This node subscribes to /map and /odom to create a costmap of the areas that the front facing heat sensor has seen. The node will decide the next decision point to navigate to by finding the the area with the lowest cost. Whenever the robot reaches a decision point, it rotate 360 so that the front facing heat sensor can sweep the area before deciding on the subsequent decision point. Decision points are published to the pathfinder node for navigation. If heat sources are detected, survivor zone sequence will become active and searching phase will freeze temporarily. After all the heat sources before the ramp area has been found, searching phase will end and the node will close.
 
 ## Mapping Phase
+This node subscribes to /map to search for frontiers in the area before the ramp area. The robot will choose unexplored frontiers as decision points to navigate towards. Decision points are published to the pathfinder node for navigation. Once there are no more frontiers, map closure before the ramp area would have been achieved and the mapping phase would be completed. The node will then publish the final decision point to pathfinder and set target lock as true so that pathfinder will not exit until it has reached the final decision point. After that the node will publish ramp sequence as True for survivor zone sequence before the node closes.
 
-# Pathfinder
+## Pathfinder
+This node subscribes to /decisionpoint, /map and /odom and tries to navigate to decision points published. It creates an optimal path by overlaying an A* cost map on a wall proximity cost map before finding the path with the lowest total cost. Waypoints are created based on the optimal path and the bot tries to move from waypoint to waypoint. This node also subscribes to /scan topic and initiates obstacle avoidance if lidar detects an obstacle. If heat source is detected, survivor zone sequence will become active and pathfinder will be killed. Target lock means pathfinder will not exit until decision point has been reached. Non target lock means pathfinder will exit and take in new decision point the moment it detects and avoids obstacles. For this mission, targetlock will only be used for the final decision point past the do not cross line after searchingphase and mappingphase have been completed
