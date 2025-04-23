@@ -1,10 +1,10 @@
 # Software info
 ## Overview
 How to operate:
-1. Turn on robot such that heading is the same as starting position in maze
+1. Turn on robot such that heading is the same as starting position in maze (or just turn it on in its starting position)
 2. Ensure both rpi and remote laptop are connected to the same wifi
 3. SSH into the rpi
-4. Postion the robot with its heading parallel to bottom of the maze
+4. Postion the robot with its heading parallel to bottom of the maze (see Map Parameters below)
 5. To run the program, run the following commands in seperate terminals the following order:
 - rosbu (rpi)
 - rslam (remote laptop)
