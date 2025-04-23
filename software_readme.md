@@ -13,7 +13,7 @@ How to operate:
 - ros2 run auto_nav mappingphase (remote laptop)
 - ros2 run auto_nav searchingphase (remote laptop)
 
-The main nodes will interact with each other in the following mannaer:
+The main nodes will interact with each other in the following manner:
 ![RQT Graph 1](Pictures/RQTGraph1.png)
 
 insert szs RQT Graph here
