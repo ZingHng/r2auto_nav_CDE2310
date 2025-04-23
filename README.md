@@ -7,13 +7,11 @@ The robot is required to autonomously navigate and fully map a maze. Upon detect
 The full final mission details can be found [here](https://github.com/NickInSynchronicity/EG2310_AY2024-25/blob/main/docs/Mission%20Readme.md)
 
 ## Repository structure overview
-```
+
 — README.md
 — Electronics               # this folder contains information for the electronics (heat sensor and launcher mechanism)
 — Mechanical                # this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers
 — assets
-— .gitattributes
-— __init__.py
 — helper_funcs.py           # helper functions to test robot functionality
 — pathfinder.py             # computes path for robot to travel to decision point 
 — mappingphase.py           # after both non-ramp heat sources are found, ensures map closure is achieved
@@ -28,7 +26,7 @@ The full final mission details can be found [here](https://github.com/NickInSync
 —— board_integration        # other test scripts
 — reference_scripts         # Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
 — tasks                     # in-class tasks and submissions
-```
+
 
 ## High-level design
 Our group's system functions as follows:
