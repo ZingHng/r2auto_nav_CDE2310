@@ -1,5 +1,6 @@
 # CDE2310 AY 24/25 Group 5
-
+![Final bot side view](assets/bot_pic3.jpg)
+![Final bot top view](assets/bot_pic5.jpg)
 ## System requirements
 This system uses a Turtlebot3 Burger with ROS2 Humble ([specifications](https://emanual.robotis.com/docs/en/platform/turtlebot3/features/#specifications) can be found on the Robotis website)\
 The robot is required to autonomously navigate and fully map a maze. Upon detecting a heat source, the robot should approach the heat source, stop, and fire 3 ping pong balls in a firing sequence of 2-4-2s. The robot must detect two distinct heat sources in the maze. Optionally, the robot can scale a ramp and detect a third heat source in the ramp zone.
