@@ -32,7 +32,6 @@ The full final mission details can be found [here](https://github.com/NickInSync
 Our group's system functions as follows:
 ![system flowchart](assets/FinalSolution.png)
 
-
 ## Subsystem design
 
 ### Mechanical
@@ -44,7 +43,9 @@ See [electronics_readme](Electronics/electronics_readme.md)
 See [software_readme](software_readme.md)
 
 ## Testing documentation
-
+- [amg_read_test] and [sensor_test] are used for checking output from the sensor
+- [amg_listener_test] and [amg_publisher_test] are used for checking publishing of sensor data from RPi to remote PC via ROS2
+- [r2z1.py] can be run on the remote PC to view debug messages during full operation of the system as described in the end user documentation
 
 ## End user documentation
 This repository can be downloaded as normal and built as a ROS2 workspace. Refer to [ROS2 Humble documentation](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) for more information. 
