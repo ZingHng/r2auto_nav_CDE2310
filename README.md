@@ -12,7 +12,7 @@ The full final mission details can be found [here](https://github.com/NickInSync
 - README.md
 - Electronics               _this folder contains information for the electronics (heat sensor and launcher mechanism)_
 - Mechanical                _this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers_
-- assets
+- assets                    _this folder contains pictures and documents_
 - helper_funcs.py           _helper functions to test robot functionality_
 - pathfinder.py             _computes path for robot to travel to decision point_
 - mappingphase.py           _after both non-ramp heat sources are found, ensures map closure is achieved_
@@ -20,6 +20,7 @@ The full final mission details can be found [here](https://github.com/NickInSync
 - survivorzonesequence.py   _heat source detection, launcher firing and ramp sequence_
 - package.xml               _contains package dependencies_
 - setup.py                  _creates entry points for the package_
+- software_readme.md        _this file contains information for the software_
 - dev_scripts
     - r2z1.py                  _for debugging_
     - ramp.py                  _ramp test script_
