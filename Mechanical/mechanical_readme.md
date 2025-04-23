@@ -23,6 +23,7 @@ This launcher mechanism is attached to the robot using four M3 screws to two dif
 The sensor mount is attached to the turtlebot with two M3 screws. The sensor is attached to the mount with two M2 screws.
 
 ![sensor mount](Pictures/sensor_mount.png)
+![AMG8833 mounted]
 
 ## L298N Motor Driver Mount
 The L298N motor driver mount is attached to the turtlebot with two M3 screws. The motor driver is attached to the mount with four M2.5 screws. The long holes on the sides are for the pins on the back of the motor driver.
@@ -34,8 +35,7 @@ The L298N motor driver mount is attached to the turtlebot with two M3 screws. Th
 The stepper motor driver mount is attached to the turtlebot with two M4 screws. The motor driver is attached to the mount with four M2.5 screws.
 
 ![stepper driver mount](Pictures/stepper_driver_mount.png)
-![stepper driver mounted](/assets/bot_pic2.jpg)
-_Stepper driver and AMG8833 sensor mounts_
+![stepper driver mounted](/assets/bot_pic1.jpg)
 
 ## Counterweight
 The counterweight holder is attached to the turtlebot with two M3 screws. We put twelve M8x25 socket head screws inside. We discovered that the robot rocks forwards and backwards due to the weight of the launching mechanism, as such we created a counterweight holder to shift the center of gravity towards the middle of the robot.
@@ -118,4 +118,3 @@ All the fasteners used are listed in the tables below.
 | M4 hex nuts         | 4         |
 
 
-[def]: assets/bot_pic4.jpg
