@@ -29,7 +29,7 @@ The sensor mount is attached to the turtlebot with two M3 screws. The sensor is 
 The L298N motor driver mount is attached to the turtlebot with two M3 screws. The motor driver is attached to the mount with four M2.5 screws. The long holes on the sides are for the pins on the back of the motor driver.
 
 ![L298N mount](Pictures/motor_driver_mount.png)
-![L298N mounted](/assets/bot_pic4.jpg)
+![L298N mounted](/assets/bot_pic6.jpg)
 
 ## Stepper Motor Driver Mount
 The stepper motor driver mount is attached to the turtlebot with two M4 screws. The motor driver is attached to the mount with four M2.5 screws.
