@@ -14,9 +14,9 @@ The full final mission details can be found [here](https://github.com/NickInSync
 - Mechanical                _this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers_
 - assets                    _this folder contains pictures and documents_
 - helper_funcs.py           _helper functions to test robot functionality_
-- pathfinder.py             _computes path for robot to travel to decision point_
-- mappingphase.py           _after both non-ramp heat sources are found, ensures map closure is achieved_
-- searchingphase.py         _publishes decision points for robot to navigate to_
+- pathfinder.py             _navigates the robot to subsequent decision points_
+- mappingphase.py           _ensures map closure is achieved after all non-ramp heat sources are found in searching phase_
+- searchingphase.py         _sweeps the map for heat sources_
 - survivorzonesequence.py   _heat source detection, launcher firing and ramp sequence_
 - package.xml               _contains package dependencies_
 - setup.py                  _creates entry points for the package_
