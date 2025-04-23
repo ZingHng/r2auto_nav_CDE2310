@@ -9,26 +9,25 @@ The full final mission details can be found ![here](https://github.com/NickInSyn
 ## Repository structure
 ```
 — README.md
-— Electronics
-—— electronics_readme
-— __pycache__
+— Electronics               # this folder contains information for the electronics (heat sensor and launcher mechanism)
+— Mechanical                # this folder contains information for the mechanical design of the launcher mechanism and mounts for heat sensor and motor drivers
 — assets
 — .gitattributes
 — __init__.py
-— helper_funcs.py
-— pathfinder.py
-— mappingphase.py
-— searchingphase.py
-— survivorzonesequence.py
+— helper_funcs.py           # helper functions
+— pathfinder.py             # computes path for robot to travel to decision point 
+— mappingphase.py           # after both non-ramp heat sources are found, checks if maze is fully mapped
+— searchingphase.py         # publishes decision points for robot to navigate to
+— survivorzonesequence.py   # heat source detection and launcher firing
 — package.xml
 — dev_scripts
-—— r2z1.py # for debugging 
-—— ramp.py # ramp test script
-—— sensor_development # scripts to test heat sensor
-—— launcher_development # scripts used for development of launcher system
-—— board_integration # other test scripts
-— reference_scripts # Scripts used as reference, including original r2auto_nav scripts
-— tasks # in-class tasks and submissions
+—— r2z1.py                  # for debugging 
+—— ramp.py                  # ramp test script
+—— sensor_development       # scripts to test heat sensor
+—— launcher_development     # scripts used for development of launcher system
+—— board_integration        # other test scripts
+— reference_scripts         # Scripts used as reference, including ![original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
+— tasks                     # in-class tasks and submissions
 ```
 
 ## High-level design
@@ -39,7 +38,7 @@ Our group's system functions as follows:
 ## Subsystem design
 
 ### Mechanical
-
+See ![mechanical_readme](Mechanical/mechanical_readme.md)
 ### Electrical
 See ![electronics_readme](Electronics/electronics_readme.md)
 
