@@ -251,7 +251,7 @@ class Pathfinder(Node):
             10)
         self.targetlock = targetlock
 
-        # create /pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
+        # create pathfinderactive publisher so that mappingphase and searchingphase do not send new decisionpoints
         self.pathfinderactive_publisher_ = self.create_publisher(Bool, 'pathfinderactive', 10) #pathfinderactive publisher
         self.pathfinderactive = False
         self.waypoints = None
