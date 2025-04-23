@@ -14,7 +14,7 @@ How to operate:
 - ros2 run auto_nav searchingphase (remote laptop)
 
 The main nodes will interact with each other in the following manner:
-![RQT Graph 1](Pictures/RQTGraph1.png)
+![RQT Graph 1](assets/RQTGraph1.png)
 
 ## Map Parameters
 Taking the ramp area as the top of the map, the robot will start at the bottom left or bottom right of the map. 
@@ -29,7 +29,7 @@ For the final decision point in mappingphase.py, only the x coordinate has to be
 - If robot starts at the bottom left, finaldp_x is the x distance from the left wall to the final decision point
 - If robot starts at the bottom right, finaldp_x is the x distance from the right wall to the final decision point
 
-![Example Map](Pictures/ExampleMap.png) 
+![Example Map](assets/ExampleMap.png) 
 
 ## ROSBU and RSLAM
 ### rosbu
