@@ -1,6 +1,6 @@
 # Mechanical info
 ## Robot Overview
-Below is the overview of the robot CAD, we adopted a flywheel launching mechanism with a sloped hopper design for smooth feeding.
+Below is the overview of the robot CAD, we adopted a flywheel launching mechanism with a sloped hopper design for smooth feeding. The robot CAD can be downloaded [here](https://drive.google.com/file/d/1z6XVp3NTTHMczwou05BLjMLxJpayefCc/view?usp=sharing).
 
 ![front view](Pictures/cad_1.drawio.png)
 ![back view](Pictures/cad_2.drawio.png)
