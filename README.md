@@ -1,10 +1,10 @@
 # CDE2310 AY 24/25 Group 5
 
 ## System requirements
-This system uses a Turtlebot3 Burger with ROS2 Humble (![specifications](https://emanual.robotis.com/docs/en/platform/turtlebot3/features/#specifications) can be found on the Robotis website)\
+This system uses a Turtlebot3 Burger with ROS2 Humble ([specifications](https://emanual.robotis.com/docs/en/platform/turtlebot3/features/#specifications) can be found on the Robotis website)\
 The robot is required to autonomously navigate and fully map a maze. Upon detecting a heat source, the robot should approach the heat source, stop, and fire 3 ping pong balls in a firing sequence of 2-4-2s. The robot must detect two distinct heat sources in the maze. Optionally, the robot can scale a ramp and detect a third heat source in the ramp zone.
 
-The full final mission details can be found ![here](https://github.com/NickInSynchronicity/EG2310_AY2024-25/blob/main/docs/Mission%20Readme.md)
+The full final mission details can be found [here](https://github.com/NickInSynchronicity/EG2310_AY2024-25/blob/main/docs/Mission%20Readme.md)
 
 ## Repository structure overview
 ```
@@ -26,7 +26,7 @@ The full final mission details can be found ![here](https://github.com/NickInSyn
 —— sensor_development       # scripts to test heat sensor
 —— launcher_development     # scripts used for development of launcher system
 —— board_integration        # other test scripts
-— reference_scripts         # Scripts used as reference, including ![original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
+— reference_scripts         # Scripts used as reference, including [original r2auto_nav scripts](https://github.com/NickInSynchronicity/r2auto_nav_CDE2310)
 — tasks                     # in-class tasks and submissions
 ```
 
@@ -38,19 +38,19 @@ Our group's system functions as follows:
 ## Subsystem design
 
 ### Mechanical
-See ![mechanical_readme](Mechanical/mechanical_readme.md)
+See [mechanical_readme](Mechanical/mechanical_readme.md)
 ### Electrical
-See ![electronics_readme](Electronics/electronics_readme.md)
+See [electronics_readme](Electronics/electronics_readme.md)
 
 ### Software
-See ![software_readme](software_readme.md)
+See [software_readme](software_readme.md)
 
 ## Testing documentation
 
 
 ## End user documentation
-This repository can be downloaded as normal and built as a ROS2 workspace. Refer to ![ROS2 Humble documentation](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) for more information. 
+This repository can be downloaded as normal and built as a ROS2 workspace. Refer to [ROS2 Humble documentation](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) for more information. 
 
 
 
-See ![user manual](assets/end_user_documentation_v1.1.pdf) for details on operation
+See [user manual](assets/end_user_documentation_v1.1.pdf) for details on operation
