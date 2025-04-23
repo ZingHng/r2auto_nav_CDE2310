@@ -14,9 +14,10 @@ For the launching mechanism we adopted a dual flywheel setup as this would give 
 For this mechanism, we used two DC motors to power the flywheels and a stepper motor to feed balls into the flywheels.
 
 The calculation for the flywheel motors is shown below.
+
 ![calculation](Pictures/calculation.drawio.png)
 
-This launcher mechanism is attached to the robot using 4 M3 screws to two different layers on our turtlebot.
+This launcher mechanism is attached to the robot using four M3 screws to two different layers on our turtlebot.
 
 ## AMG8833 Sensor Mount
 The sensor mount is attached to the turtlebot with two M3 screws. The sensor is attached to the mount with two M2 screws.
